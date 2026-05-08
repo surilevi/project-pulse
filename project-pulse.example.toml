@@ -1,0 +1,59 @@
+watched_root = "."
+lookback_window_hours = 24
+minimum_recent_files = 4
+minimum_recent_code_files = 2
+minimum_workspaces_with_activity = 1
+minimum_activity_score = 12
+maximum_reported_files = 12
+require_git_signal = false
+expose_absolute_paths_in_reports = false
+
+high_signal_extensions = [
+  ".py",
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".rs",
+  ".go",
+  ".java",
+  ".cs",
+  ".sql",
+  ".html",
+  ".css",
+  ".md",
+  ".toml",
+  ".yaml",
+  ".yml",
+]
+
+ignored_directory_names = [
+  ".git",
+  ".idea",
+  ".vscode",
+  ".venv",
+  "venv",
+  "node_modules",
+  "__pycache__",
+  "dist",
+  "build",
+]
+
+ignored_file_names = [
+  ".DS_Store",
+  "Thumbs.db",
+  "project-pulse.local.toml",
+]
+
+project_marker_names = [
+  "pyproject.toml",
+  "package.json",
+  "requirements.txt",
+  ".git",
+]
+
+[weights]
+recent_file = 1
+recent_code_file = 3
+repository_with_uncommitted_changes = 4
+repository_with_recent_commit = 5

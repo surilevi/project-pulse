@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -eu
+
+email="$(git config --get user.email || true)"
+placeholder_email="change-this-before-public-commit@example.com"
+
+if [ -z "$email" ] || [ "$email" = "$placeholder_email" ]; then
+  echo "Blocked: configure a public-safe git user.email for this repo before committing." >&2
+  exit 1
+fi
+
+staged_files="$(git diff --cached --name-only)"
+machine_detail_scan_exclusions='^(\.githooks/pre-commit|src/project_pulse/audit\.py)$'
+
+if printf '%s\n' "$staged_files" | grep -Eq '(^|/)(project-pulse\.local\.toml|\.env|\.env\..+)$'; then
+  echo "Blocked: local config or env files are staged." >&2
+  exit 1
+fi
+
+files_to_scan="$(printf '%s\n' "$staged_files" | grep -Ev "$machine_detail_scan_exclusions" || true)"
+
+if [ -n "$files_to_scan" ]; then
+  if git diff --cached -- $files_to_scan -- ':(exclude)*.png' ':(exclude)*.jpg' ':(exclude)*.jpeg' ':(exclude)*.gif' | grep -Eq '[A-Za-z]:\\\\|/Users/|/home/|\\\\Users\\\\'; then
+    echo "Blocked: staged changes appear to contain local machine details." >&2
+    exit 1
+  fi
+fi
