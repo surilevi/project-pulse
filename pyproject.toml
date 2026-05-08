@@ -2,8 +2,15 @@
 name = "project-pulse"
 version = "0.1.0"
 description = "Local-first activity scanner for turning real laptop work into explainable publishing decisions."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -13,6 +20,10 @@ dev = [
 
 [project.scripts]
 project-pulse = "project_pulse.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/surilevi/project-pulse"
+Repository = "https://github.com/surilevi/project-pulse"
 
 [build-system]
 requires = ["hatchling"]

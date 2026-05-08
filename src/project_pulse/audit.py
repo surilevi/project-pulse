@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import re
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path
 
 from .config import ProjectPulseConfig
-
 
 ABSOLUTE_PATH_PATTERNS = (
     re.compile(r"[A-Za-z]:\\"),
     re.compile(r"/Users/"),
     re.compile(r"/home/"),
+    re.compile(r"/opt/"),
+    re.compile(r"/srv/"),
+    re.compile(r"/mnt/"),
+    re.compile(r"/etc/"),
+    re.compile(r"/var/"),
+    re.compile(r"/tmp/"),
     re.compile(r"\\Users\\"),
 )
 
@@ -45,6 +50,7 @@ def run_public_audit(repo_root: Path, config: ProjectPulseConfig) -> list[AuditF
     findings: list[AuditFinding] = []
     findings.extend(_check_git_identity(repo_root))
     findings.extend(_check_ignored_local_config(repo_root))
+    findings.extend(_check_sensitive_tracked_files(repo_root))
     findings.extend(_scan_working_tree(repo_root, config))
     return findings
 
@@ -111,6 +117,22 @@ def _check_ignored_local_config(repo_root: Path) -> list[AuditFinding]:
                     severity="high",
                     path="project-pulse.local.toml",
                     message="machine-local config is tracked by git",
+                )
+            )
+    return findings
+
+
+def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
+    findings: list[AuditFinding] = []
+    tracked_files = _git_ls_files_all(repo_root)
+    for tracked_path in tracked_files:
+        normalized = tracked_path.replace("\\", "/")
+        if re.search(r"(^|/)\.env(\..+)?$", normalized):
+            findings.append(
+                AuditFinding(
+                    severity="high",
+                    path=tracked_path,
+                    message="tracked env file should not be committed to a public repository",
                 )
             )
     return findings
@@ -221,6 +243,20 @@ def _git_ls_files(repo_root: Path, path: Path) -> bool:
     except (OSError, subprocess.CalledProcessError):
         return False
     return bool(result.stdout.strip())
+
+
+def _git_ls_files_all(repo_root: Path) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "ls-files"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()]
 
 
 def _looks_binary(file_path: Path) -> bool:

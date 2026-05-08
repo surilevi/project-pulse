@@ -57,18 +57,31 @@ def render_text_report(
             if workspace.recent_file_count == 0:
                 continue
             marker_text = ",".join(workspace.marker_names) if workspace.marker_names else "none"
+            repo_label = (
+                _display_path(
+                    workspace.repository_root,
+                    session.watched_root,
+                    expose_absolute,
+                )
+                if workspace.repository_root
+                else "none"
+            )
             lines.append(
                 "- "
                 f"{_display_path(workspace.root, session.watched_root, expose_absolute)} "
                 f"| recent_files={workspace.recent_file_count} "
-                f"markers={marker_text} repo={_display_path(workspace.repository_root, session.watched_root, expose_absolute) if workspace.repository_root else 'none'}"
+                f"markers={marker_text} repo={repo_label}"
             )
 
     if session.repositories:
         lines.append("")
         lines.append("Repositories")
         for repo in session.repositories:
-            if repo.recent_file_count == 0 and not repo.has_uncommitted_changes and not repo.has_recent_commit:
+            if (
+                repo.recent_file_count == 0
+                and not repo.has_uncommitted_changes
+                and not repo.has_recent_commit
+            ):
                 continue
             lines.append(
                 "- "
@@ -84,11 +97,20 @@ def render_text_report(
         lines.append("")
         lines.append("Recent files")
         for item in session.recent_files[:max_files]:
+            repo_label = (
+                _display_path(
+                    item.repository_root,
+                    session.watched_root,
+                    expose_absolute,
+                )
+                if item.repository_root
+                else "none"
+            )
             lines.append(
                 "- "
                 f"{_display_path(item.path, session.watched_root, expose_absolute)} "
                 f"| modified_at={item.modified_at.isoformat()} "
-                f"repo={_display_path(item.repository_root, session.watched_root, expose_absolute) if item.repository_root else 'none'}"
+                f"repo={repo_label}"
             )
 
     return "\n".join(lines)

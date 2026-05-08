@@ -35,8 +35,14 @@ ignored_directory_names = [
   "venv",
   "node_modules",
   "__pycache__",
+  ".pytest_cache",
+  ".ruff_cache",
   "dist",
   "build",
+]
+
+low_signal_directory_names = [
+  "outputs",
 ]
 
 ignored_file_names = [

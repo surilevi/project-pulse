@@ -1,16 +1,82 @@
 from __future__ import annotations
 
+import tomllib
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
-import tomllib
 
 from .models import ProjectPulseConfigData, ScoreWeights
-
 
 DEFAULT_CONFIG_NAME = "project-pulse.toml"
 LOCAL_CONFIG_NAME = "project-pulse.local.toml"
 EXAMPLE_CONFIG_NAME = "project-pulse.example.toml"
+DEFAULT_CONFIG_TEMPLATE = """
+watched_root = "."
+lookback_window_hours = 24
+minimum_recent_files = 4
+minimum_recent_code_files = 2
+minimum_workspaces_with_activity = 1
+minimum_activity_score = 12
+maximum_reported_files = 12
+require_git_signal = false
+expose_absolute_paths_in_reports = false
+
+high_signal_extensions = [
+  ".py",
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".rs",
+  ".go",
+  ".java",
+  ".cs",
+  ".sql",
+  ".html",
+  ".css",
+  ".md",
+  ".toml",
+  ".yaml",
+  ".yml",
+]
+
+ignored_directory_names = [
+  ".git",
+  ".idea",
+  ".vscode",
+  ".venv",
+  "venv",
+  "node_modules",
+  "__pycache__",
+  ".pytest_cache",
+  ".ruff_cache",
+  "dist",
+  "build",
+]
+
+low_signal_directory_names = [
+  "outputs",
+]
+
+ignored_file_names = [
+  ".DS_Store",
+  "Thumbs.db",
+  "project-pulse.local.toml",
+]
+
+project_marker_names = [
+  "pyproject.toml",
+  "package.json",
+  "requirements.txt",
+  ".git",
+]
+
+[weights]
+recent_file = 1
+recent_code_file = 3
+repository_with_uncommitted_changes = 4
+repository_with_recent_commit = 5
+""".strip()
 
 
 @dataclass(slots=True)
@@ -18,38 +84,70 @@ class ProjectPulseConfig:
     data: ProjectPulseConfigData
 
     @classmethod
-    def load(cls, config_path: Path) -> "ProjectPulseConfig":
-        raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
-        weights = raw["weights"]
+    def load(cls, config_path: Path) -> ProjectPulseConfig:
+        return cls.from_text(
+            config_path.read_text(encoding="utf-8"),
+            base_directory=config_path.resolve().parent,
+        )
+
+    @classmethod
+    def from_text(
+        cls,
+        raw_text: str,
+        base_directory: Path | None = None,
+    ) -> ProjectPulseConfig:
+        raw = tomllib.loads(raw_text)
+        weights = raw.get("weights", {})
+        watched_root = Path(raw.get("watched_root", ".")).expanduser()
+        if base_directory is not None and not watched_root.is_absolute():
+            watched_root = (base_directory / watched_root).resolve()
         data = ProjectPulseConfigData(
-            watched_root=Path(raw["watched_root"]).expanduser(),
-            lookback_window=timedelta(hours=int(raw["lookback_window_hours"])),
-            minimum_recent_files=int(raw["minimum_recent_files"]),
-            minimum_recent_code_files=int(raw["minimum_recent_code_files"]),
-            minimum_workspaces_with_activity=int(raw["minimum_workspaces_with_activity"]),
-            minimum_activity_score=int(raw["minimum_activity_score"]),
-            maximum_reported_files=int(raw["maximum_reported_files"]),
-            require_git_signal=bool(raw["require_git_signal"]),
-            expose_absolute_paths_in_reports=bool(raw["expose_absolute_paths_in_reports"]),
-            high_signal_extensions=tuple(raw["high_signal_extensions"]),
-            ignored_directory_names=tuple(raw["ignored_directory_names"]),
-            ignored_file_names=tuple(raw["ignored_file_names"]),
-            project_marker_names=tuple(raw["project_marker_names"]),
+            watched_root=watched_root,
+            lookback_window=timedelta(hours=int(raw.get("lookback_window_hours", 24))),
+            minimum_recent_files=int(raw.get("minimum_recent_files", 4)),
+            minimum_recent_code_files=int(raw.get("minimum_recent_code_files", 2)),
+            minimum_workspaces_with_activity=int(raw.get("minimum_workspaces_with_activity", 1)),
+            minimum_activity_score=int(raw.get("minimum_activity_score", 12)),
+            maximum_reported_files=int(raw.get("maximum_reported_files", 12)),
+            require_git_signal=bool(raw.get("require_git_signal", False)),
+            expose_absolute_paths_in_reports=bool(
+                raw.get("expose_absolute_paths_in_reports", False)
+            ),
+            high_signal_extensions=tuple(raw.get("high_signal_extensions", [])),
+            ignored_directory_names=tuple(raw.get("ignored_directory_names", [])),
+            low_signal_directory_names=tuple(raw.get("low_signal_directory_names", [])),
+            ignored_file_names=tuple(raw.get("ignored_file_names", [])),
+            project_marker_names=tuple(raw.get("project_marker_names", [])),
             weights=ScoreWeights(
-                recent_file=int(weights["recent_file"]),
-                recent_code_file=int(weights["recent_code_file"]),
+                recent_file=int(weights.get("recent_file", 1)),
+                recent_code_file=int(weights.get("recent_code_file", 3)),
                 repository_with_uncommitted_changes=int(
-                    weights["repository_with_uncommitted_changes"]
+                    weights.get("repository_with_uncommitted_changes", 4)
                 ),
-                repository_with_recent_commit=int(weights["repository_with_recent_commit"]),
+                repository_with_recent_commit=int(weights.get("repository_with_recent_commit", 5)),
             ),
         )
         return cls(data=data)
 
     @classmethod
-    def load_default(cls, base_directory: Path) -> "ProjectPulseConfig":
+    def load_default(cls, base_directory: Path) -> ProjectPulseConfig:
         local_config = base_directory / LOCAL_CONFIG_NAME
         if local_config.exists():
             return cls.load(local_config)
+        default_config = base_directory / DEFAULT_CONFIG_NAME
+        if default_config.exists():
+            return cls.load(default_config)
         example_config = base_directory / EXAMPLE_CONFIG_NAME
-        return cls.load(example_config)
+        if example_config.exists():
+            return cls.load(example_config)
+        return cls.from_text(DEFAULT_CONFIG_TEMPLATE, base_directory=base_directory)
+
+    @classmethod
+    def load_public_audit_default(cls, base_directory: Path) -> ProjectPulseConfig:
+        default_config = base_directory / DEFAULT_CONFIG_NAME
+        if default_config.exists():
+            return cls.load(default_config)
+        example_config = base_directory / EXAMPLE_CONFIG_NAME
+        if example_config.exists():
+            return cls.load(example_config)
+        return cls.from_text(DEFAULT_CONFIG_TEMPLATE, base_directory=base_directory)

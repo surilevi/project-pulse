@@ -26,6 +26,7 @@ class ProjectPulseConfigData:
     expose_absolute_paths_in_reports: bool
     high_signal_extensions: tuple[str, ...]
     ignored_directory_names: tuple[str, ...]
+    low_signal_directory_names: tuple[str, ...]
     ignored_file_names: tuple[str, ...]
     project_marker_names: tuple[str, ...]
     weights: ScoreWeights

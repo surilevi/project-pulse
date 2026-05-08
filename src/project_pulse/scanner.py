@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import datetime, timezone
 import os
-from pathlib import Path
 import subprocess
+from collections import defaultdict
+from datetime import UTC, datetime
+from pathlib import Path
 
 from .models import (
     GitRepositorySnapshot,
@@ -21,7 +21,7 @@ class FilesystemScanner:
 
     def scan(self, watched_root: Path | None = None) -> WorkSession:
         root = (watched_root or self.config.watched_root).resolve()
-        observed_at = datetime.now(timezone.utc)
+        observed_at = datetime.now(UTC)
         workspace_roots = self._discover_workspace_roots(root)
         git_roots = self._discover_git_roots(root)
         recent_files = self._collect_recent_files(root, observed_at, workspace_roots, git_roots)
@@ -51,7 +51,8 @@ class FilesystemScanner:
         marker_names = set(self.config.project_marker_names)
         for current_dir_text, dirnames, filenames in os.walk(root):
             current_dir = Path(current_dir_text)
-            if marker_names.intersection(filenames) or ".git" in dirnames:
+            has_git_metadata = (current_dir / ".git").exists()
+            if marker_names.intersection(filenames) or has_git_metadata:
                 discovered.append(current_dir.resolve())
             dirnames[:] = [
                 name
@@ -64,13 +65,13 @@ class FilesystemScanner:
         discovered: list[Path] = []
         for current_dir_text, dirnames, _ in os.walk(root):
             current_dir = Path(current_dir_text)
-            has_git_directory = ".git" in dirnames
+            has_git_metadata = (current_dir / ".git").exists()
             dirnames[:] = [
                 name
                 for name in dirnames
                 if name not in self.config.ignored_directory_names
             ]
-            if has_git_directory:
+            if has_git_metadata:
                 discovered.append(current_dir.resolve())
         return sorted(discovered, key=lambda item: len(str(item)), reverse=True)
 
@@ -92,14 +93,16 @@ class FilesystemScanner:
                 if name not in self.config.ignored_directory_names
             ]
             for filename in filenames:
-                if filename in self.config.ignored_file_names:
+                if filename == ".git" or filename in self.config.ignored_file_names:
                     continue
                 file_path = (current_dir / filename).resolve()
+                if self._is_low_signal_path(root, file_path):
+                    continue
                 try:
                     stat = file_path.stat()
                 except OSError:
                     continue
-                modified_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+                modified_at = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
                 if modified_at < cutoff:
                     continue
                 workspace_root = self._match_root(file_path, workspace_roots)
@@ -221,7 +224,7 @@ class FilesystemScanner:
             return None, None
 
         if committed_at.tzinfo is None:
-            committed_at = committed_at.replace(tzinfo=timezone.utc)
+            committed_at = committed_at.replace(tzinfo=UTC)
         cutoff = observed_at - self.config.lookback_window
         if committed_at < cutoff:
             return None, None
@@ -240,3 +243,11 @@ class FilesystemScanner:
     @staticmethod
     def _match_repository(file_path: Path, git_roots: list[Path]) -> Path | None:
         return FilesystemScanner._match_root(file_path, git_roots)
+
+    def _is_low_signal_path(self, root: Path, file_path: Path) -> bool:
+        low_signal_names = set(self.config.low_signal_directory_names)
+        try:
+            relative_parts = file_path.relative_to(root).parts
+        except ValueError:
+            relative_parts = file_path.parts
+        return any(part in low_signal_names for part in relative_parts)

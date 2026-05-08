@@ -5,7 +5,7 @@ This guide is for publishing `Project Pulse` safely as your first public reposit
 ## Before you publish
 
 1. Keep `project-pulse.local.toml` local only.
-2. Run `project-pulse public-audit`.
+2. From the repository root, run `python -m project_pulse public-audit`.
 3. Read `git status --short --ignored` and make sure you understand every tracked file.
 4. Make sure your repo-local Git email is your GitHub-provided `noreply` email, not a personal email.
 5. Decide whether you want a software license before the first public push.
@@ -51,6 +51,7 @@ After the GitHub repo exists and your local email is set:
 cd path\to\project-pulse
 git add .
 git commit -m "Initial commit"
+git remote add origin https://github.com/surilevi/project-pulse.git
 git push -u origin main
 ```
 

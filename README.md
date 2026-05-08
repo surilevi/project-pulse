@@ -20,6 +20,7 @@ pip install -e .
 Copy-Item project-pulse.example.toml project-pulse.local.toml
 # Edit project-pulse.local.toml and set watched_root to your real projects folder.
 project-pulse scan
+python -m project_pulse public-audit
 ```
 
 ## Configuration
@@ -33,6 +34,7 @@ The repo ships with `project-pulse.example.toml` and expects your machine-specif
 - `minimum_workspaces_with_activity`: minimum number of active project roots in the session
 - `minimum_activity_score`: overall threshold produced by weighted signals
 - `expose_absolute_paths_in_reports`: keep this `false` for public-safe reports
+- `low_signal_directory_names`: generated-output folders to ignore when scoring activity
 - `weights`: named contributions to the activity score
 
 ## First commands

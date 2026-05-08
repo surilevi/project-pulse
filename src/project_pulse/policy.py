@@ -12,7 +12,9 @@ class MeaningfulChangeDetector:
         repos_with_uncommitted_changes = sum(
             1 for repo in session.repositories if repo.has_uncommitted_changes
         )
-        repos_with_recent_commits = sum(1 for repo in session.repositories if repo.has_recent_commit)
+        repos_with_recent_commits = sum(
+            1 for repo in session.repositories if repo.has_recent_commit
+        )
 
         metrics: dict[str, int | str | bool | None] = {
             "watched_root": session.watched_root.name or str(session.watched_root),
@@ -29,8 +31,8 @@ class MeaningfulChangeDetector:
 
         if session.recent_file_count >= self.config.minimum_recent_files:
             reasons.append(
-                f"recent file activity passed the minimum threshold ({session.recent_file_count} >= "
-                f"{self.config.minimum_recent_files})"
+                "recent file activity passed the minimum threshold "
+                f"({session.recent_file_count} >= {self.config.minimum_recent_files})"
             )
         else:
             blockers.append(
@@ -44,7 +46,8 @@ class MeaningfulChangeDetector:
             )
         else:
             blockers.append(
-                f"recent code-like changes are below threshold ({session.recent_code_file_count} < "
+                "recent code-like changes are below threshold "
+                f"({session.recent_code_file_count} < "
                 f"{self.config.minimum_recent_code_files})"
             )
 
@@ -54,7 +57,8 @@ class MeaningfulChangeDetector:
             )
         else:
             blockers.append(
-                "no project workspace met the minimum activity requirement in the current session window"
+                "no project workspace met the minimum activity requirement "
+                "in the current session window"
             )
 
         if score >= self.config.minimum_activity_score:
@@ -88,7 +92,9 @@ class MeaningfulChangeDetector:
         repositories_with_uncommitted_changes = sum(
             1 for repo in session.repositories if repo.has_uncommitted_changes
         )
-        repositories_with_recent_commits = sum(1 for repo in session.repositories if repo.has_recent_commit)
+        repositories_with_recent_commits = sum(
+            1 for repo in session.repositories if repo.has_recent_commit
+        )
         return (
             session.recent_file_count * weights.recent_file
             + session.recent_code_file_count * weights.recent_code_file
