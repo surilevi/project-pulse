@@ -85,6 +85,7 @@ class CodexWatcher:
                 "Codex integration is disabled; set [codex_integration].enabled = true"
             )
         workspace_root = self._resolve_workspace_root()
+        self._ensure_safe_state_path(self.config.data.watched_root.resolve())
         session = self.scanner.scan(watched_root=workspace_root)
         decision = self.detector.evaluate(session)
         return self.tracker.record(workspace_root, session, decision)
@@ -96,6 +97,7 @@ class CodexWatcher:
             )
         if max_polls is not None and max_polls <= 0:
             return 0
+        self._ensure_safe_state_path(self.config.data.watched_root.resolve())
 
         state = self._load_state()
         records_created = 0
@@ -126,6 +128,7 @@ class CodexWatcher:
             raise CodexIntegrationError(
                 "Codex integration is disabled; set [codex_integration].enabled = true"
             )
+        self._ensure_safe_state_path(self.config.data.watched_root.resolve())
 
         state = self._load_state()
         now = datetime.now(UTC)
@@ -237,3 +240,15 @@ class CodexWatcher:
             last_seen_at=state.last_seen_at,
             last_recorded_at=state.last_recorded_at,
         )
+
+    def _ensure_safe_state_path(self, watched_root: Path) -> None:
+        state_path = self.integration.state_path.resolve()
+        try:
+            relative_to_root = state_path.relative_to(watched_root)
+        except ValueError:
+            return
+        if ".project-pulse-state" not in relative_to_root.parts:
+            raise CodexIntegrationError(
+                "Codex watcher state path must live outside watched_root or inside "
+                "a .project-pulse-state directory"
+            )

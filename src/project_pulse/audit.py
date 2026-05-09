@@ -53,7 +53,7 @@ def run_public_audit(repo_root: Path, config: ProjectPulseConfig) -> list[AuditF
     findings: list[AuditFinding] = []
     findings.extend(_check_git_identity(repo_root))
     findings.extend(_check_ignored_local_config(repo_root))
-    findings.extend(_check_sensitive_tracked_files(repo_root))
+    findings.extend(_check_sensitive_tracked_files(repo_root, config))
     findings.extend(_scan_working_tree(repo_root, config))
     return findings
 
@@ -125,9 +125,13 @@ def _check_ignored_local_config(repo_root: Path) -> list[AuditFinding]:
     return findings
 
 
-def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
+def _check_sensitive_tracked_files(
+    repo_root: Path,
+    config: ProjectPulseConfig,
+) -> list[AuditFinding]:
     findings: list[AuditFinding] = []
     tracked_files = _git_ls_files_all(repo_root)
+    local_state_paths = _configured_local_state_paths(repo_root, config)
     for tracked_path in tracked_files:
         normalized = tracked_path.replace("\\", "/")
         if normalized.startswith(".project-pulse-state/"):
@@ -141,6 +145,17 @@ def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
                     ),
                 )
             )
+        if normalized in local_state_paths:
+            findings.append(
+                AuditFinding(
+                    severity="high",
+                    path=tracked_path,
+                    message=(
+                        "tracked local state file should not be committed "
+                        "to a public repository"
+                    ),
+                )
+            )
         if re.search(r"(^|/)\.env(\..+)?$", normalized):
             findings.append(
                 AuditFinding(
@@ -150,6 +165,23 @@ def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
                 )
             )
     return findings
+
+
+def _configured_local_state_paths(
+    repo_root: Path,
+    config: ProjectPulseConfig,
+) -> set[str]:
+    configured_paths = {
+        config.data.session_persistence.store_path.resolve(),
+        config.data.codex_integration.state_path.resolve(),
+    }
+    relative_paths: set[str] = set()
+    for configured_path in configured_paths:
+        try:
+            relative_paths.add(configured_path.relative_to(repo_root.resolve()).as_posix())
+        except ValueError:
+            continue
+    return relative_paths
 
 
 def _scan_working_tree(repo_root: Path, config: ProjectPulseConfig) -> list[AuditFinding]:

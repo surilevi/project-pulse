@@ -324,3 +324,75 @@ def test_codex_watch_with_zero_max_polls_is_a_no_op(tmp_path: Path) -> None:
     assert watcher.watch(max_polls=0) == 0
     assert scanner.calls == []
     assert tracker.calls == []
+
+
+def test_codex_watcher_rejects_state_path_inside_watched_root_outside_local_state(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    config = ProjectPulseConfig.from_text(
+        f"""
+watched_root = "{tmp_path.as_posix()}"
+lookback_window_hours = 24
+minimum_recent_files = 4
+minimum_recent_code_files = 2
+minimum_workspaces_with_activity = 1
+minimum_activity_score = 12
+maximum_reported_files = 12
+require_git_signal = false
+expose_absolute_paths_in_reports = false
+high_signal_extensions = [".py"]
+ignored_directory_names = [".git"]
+low_signal_directory_names = []
+ignored_file_names = []
+project_marker_names = ["pyproject.toml"]
+[weights]
+recent_file = 1
+recent_code_file = 3
+repository_with_uncommitted_changes = 4
+repository_with_recent_commit = 5
+[publisher]
+enabled = false
+target_repo_path = ""
+mirror_subdirectory = "workspace"
+commit_message_prefix = "pulse"
+push_after_commit = false
+require_explicit_push = true
+exclude_globs = []
+[session_persistence]
+enabled = true
+store_path = "{(tmp_path / '.project-pulse-state' / 'sessions.json').as_posix()}"
+session_gap_minutes = 90
+max_sessions_per_workspace = 25
+[codex_integration]
+enabled = true
+workspace = "workspace"
+process_names = ["Codex.exe"]
+poll_seconds = 1
+state_path = "{(tmp_path / 'codex-state.json').as_posix()}"
+""".strip()
+    )
+    watcher = CodexWatcher(
+        config,
+        scanner=_FakeScanner(_build_session(workspace_root, datetime.now(UTC))),
+        detector=_FakeDetector(
+            PublishDecision(
+                publishable=True,
+                score=12,
+                metrics={
+                    "repositories_with_uncommitted_changes": 0,
+                    "repositories_with_recent_commits": 0,
+                },
+            )
+        ),
+        tracker=_FakeTracker(
+            _build_record_result(
+                workspace_root,
+                config.data.session_persistence.store_path,
+            )
+        ),
+    )
+
+    with pytest.raises(CodexIntegrationError, match="state path must live outside watched_root"):
+        watcher.observe(False)
