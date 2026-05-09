@@ -30,6 +30,9 @@ jobs:
       - name: Run Ruff
         run: python -m ruff check src
 
+      - name: Run pytest
+        run: python -m pytest
+
       - name: Set temporary Git identity for CI audit
         run: |
           git config --local user.name "github-actions[bot]"

@@ -2,12 +2,13 @@
 
 `Project Pulse` is a local-first scanner that watches your real work under a chosen root directory and turns it into an explainable publishing recommendation.
 
-The first version does not push anything to GitHub yet. It focuses on the part that matters most for a trustworthy system:
+The current version focuses on the part that matters most for a trustworthy system:
 
 - discover recent file activity
 - detect project workspaces and optional Git evidence
 - score work sessions using named policy inputs instead of hidden constants
 - explain why a session should or should not be published
+- optionally mirror one workspace into a separate local clone of a private repo
 
 ## Why this exists
 
@@ -35,6 +36,7 @@ The repo ships with `project-pulse.example.toml` and expects your machine-specif
 - `minimum_activity_score`: overall threshold produced by weighted signals
 - `expose_absolute_paths_in_reports`: keep this `false` for public-safe reports
 - `low_signal_directory_names`: generated-output folders to ignore when scoring activity
+- `[publisher]`: opt-in private mirror settings for syncing one workspace into a separate local clone
 - `weights`: named contributions to the activity score
 
 ## First commands
@@ -44,6 +46,21 @@ project-pulse scan
 project-pulse scan --json
 project-pulse scan --root .\some-project-root
 ```
+
+## Private Publisher
+
+The private publisher is disabled by default. It is meant for a review-first workflow:
+
+1. Clone a private GitHub repo somewhere outside your watched workspace tree.
+2. Set `[publisher].enabled = true` and point `target_repo_path` at that local clone.
+3. Pick a safe `mirror_subdirectory` such as `workspace`.
+4. Run:
+
+```powershell
+project-pulse publish-private --workspace .\your-project
+```
+
+That creates a commit in the private repo clone only if the workspace has meaningful changes after filtering. Add `--push` only when you want to publish immediately.
 
 ## Public repo safety
 
@@ -57,5 +74,4 @@ project-pulse scan --root .\some-project-root
 
 - add session persistence
 - add diff summarization
-- add private-repo publishing
 - add sanitized public portfolio snapshots

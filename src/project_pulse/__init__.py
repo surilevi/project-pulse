@@ -1,6 +1,6 @@
 """Project Pulse package."""
 
 from .config import ProjectPulseConfig
-from .models import PublishDecision, WorkSession
+from .models import PrivatePublishResult, PublishDecision, WorkSession
 
-__all__ = ["ProjectPulseConfig", "PublishDecision", "WorkSession"]
+__all__ = ["ProjectPulseConfig", "PrivatePublishResult", "PublishDecision", "WorkSession"]

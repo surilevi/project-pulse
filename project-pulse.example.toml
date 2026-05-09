@@ -63,3 +63,23 @@ recent_file = 1
 recent_code_file = 3
 repository_with_uncommitted_changes = 4
 repository_with_recent_commit = 5
+
+[publisher]
+enabled = false
+target_repo_path = ""
+mirror_subdirectory = "workspace"
+commit_message_prefix = "pulse"
+push_after_commit = false
+require_explicit_push = true
+exclude_globs = [
+  ".git",
+  ".git/**",
+  ".env",
+  ".env.*",
+  "project-pulse.local.toml",
+  "__pycache__/**",
+  ".pytest_cache/**",
+  ".ruff_cache/**",
+  "dist/**",
+  "build/**",
+]

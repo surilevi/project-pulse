@@ -14,6 +14,17 @@ class ScoreWeights:
 
 
 @dataclass(slots=True)
+class PrivatePublisherConfig:
+    enabled: bool
+    target_repo_path: Path | None
+    mirror_subdirectory: Path
+    commit_message_prefix: str
+    push_after_commit: bool
+    require_explicit_push: bool
+    exclude_globs: tuple[str, ...]
+
+
+@dataclass(slots=True)
 class ProjectPulseConfigData:
     watched_root: Path
     lookback_window: timedelta
@@ -30,6 +41,7 @@ class ProjectPulseConfigData:
     ignored_file_names: tuple[str, ...]
     project_marker_names: tuple[str, ...]
     weights: ScoreWeights
+    publisher: PrivatePublisherConfig
 
 
 @dataclass(slots=True)
@@ -102,3 +114,17 @@ class PublishDecision:
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+
+@dataclass(slots=True)
+class PrivatePublishResult:
+    workspace_root: Path
+    target_repo_path: Path
+    mirror_path: Path
+    branch: str
+    commit_created: bool
+    commit_sha: str | None
+    pushed: bool
+    commit_message: str | None
+    changed_files: list[str]
+    metadata_path: Path
