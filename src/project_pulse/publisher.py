@@ -65,6 +65,12 @@ class PrivateRepoPublisher:
         active_branch = branch or self._current_branch(target_repo)
 
         mirror_path = (target_repo / mirror_subdirectory).resolve()
+        try:
+            mirror_path.relative_to(target_repo)
+        except ValueError as error:
+            raise PrivatePublisherError(
+                "publisher mirror_subdirectory must stay inside the target private repo"
+            ) from error
         mirror_path.mkdir(parents=True, exist_ok=True)
 
         desired_files = self._collect_publishable_files(workspace_root)

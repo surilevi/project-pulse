@@ -10,6 +10,17 @@ from .policy import MeaningfulChangeDetector
 from .publisher import PrivatePublisherError, PrivateRepoPublisher
 from .reporting import render_json_report, render_text_report
 from .scanner import FilesystemScanner
+from .session_tracker import SessionTracker, SessionTrackerError
+
+
+def _display_path(path: Path, root: Path) -> str:
+    try:
+        relative_path = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return str(path)
+    if str(relative_path) == ".":
+        return "."
+    return str(relative_path)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -84,6 +95,28 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow publishing even when the workspace does not meet the current publish policy.",
     )
+    session_record_parser = subparsers.add_parser(
+        "session-record",
+        help="Persist one workspace scan into the local session store.",
+        parents=[config_parent],
+    )
+    session_record_parser.add_argument(
+        "--workspace",
+        type=Path,
+        required=True,
+        help="Workspace path inside watched_root to record into the local session store.",
+    )
+    session_list_parser = subparsers.add_parser(
+        "session-list",
+        help="List persisted sessions from the local session store.",
+        parents=[config_parent],
+    )
+    session_list_parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=None,
+        help="Optional workspace path to filter persisted sessions.",
+    )
     return parser
 
 
@@ -140,6 +173,48 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Pushed: {'yes' if result.pushed else 'no'}")
         else:
             print("No publish commit was needed.")
+        return 0
+
+    if args.command == "session-record":
+        workspace_root = args.workspace.resolve()
+        session = scanner.scan(watched_root=workspace_root)
+        decision = detector.evaluate(session)
+        tracker = SessionTracker(config)
+        try:
+            result = tracker.record(workspace_root, session, decision)
+        except SessionTrackerError as error:
+            parser.exit(1, f"project-pulse session-record: {error}\n")
+
+        print(f"Workspace: {result.session.workspace_root}")
+        print(f"Session id: {result.session.session_id}")
+        print(f"Store: {_display_path(result.store_path, Path.cwd())}")
+        print(f"Created: {'yes' if result.created else 'no'}")
+        print(f"Started: {result.session.started_at.isoformat()}")
+        print(f"Updated: {result.session.updated_at.isoformat()}")
+        print(f"Records: {result.session.record_count}")
+        print(f"Activity score: {result.session.activity_score}")
+        print(f"Publishable: {'yes' if result.session.publishable else 'no'}")
+        return 0
+
+    if args.command == "session-list":
+        tracker = SessionTracker(config)
+        workspace_root = args.workspace.resolve() if args.workspace else None
+        try:
+            sessions = tracker.list_sessions(workspace_root)
+        except SessionTrackerError as error:
+            parser.exit(1, f"project-pulse session-list: {error}\n")
+
+        if not sessions:
+            print("No persisted sessions found.")
+            return 0
+
+        for item in sessions:
+            print(
+                f"{item.session_id} | {item.workspace_name} | "
+                f"updated={item.updated_at.isoformat()} | "
+                f"records={item.record_count} | score={item.activity_score} | "
+                f"publishable={'yes' if item.publishable else 'no'}"
+            )
         return 0
 
     session = scanner.scan(watched_root=args.root)

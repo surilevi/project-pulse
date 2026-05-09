@@ -5,7 +5,12 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 
-from .models import PrivatePublisherConfig, ProjectPulseConfigData, ScoreWeights
+from .models import (
+    PrivatePublisherConfig,
+    ProjectPulseConfigData,
+    ScoreWeights,
+    SessionPersistenceConfig,
+)
 
 DEFAULT_CONFIG_NAME = "project-pulse.toml"
 LOCAL_CONFIG_NAME = "project-pulse.local.toml"
@@ -50,6 +55,7 @@ ignored_directory_names = [
   "__pycache__",
   ".pytest_cache",
   ".ruff_cache",
+  ".project-pulse-state",
   "dist",
   "build",
 ]
@@ -80,7 +86,7 @@ repository_with_recent_commit = 5
 [publisher]
 enabled = false
 target_repo_path = ""
-mirror_subdirectory = "."
+mirror_subdirectory = "workspace"
 commit_message_prefix = "pulse"
 push_after_commit = false
 require_explicit_push = true
@@ -96,6 +102,12 @@ exclude_globs = [
   "dist/**",
   "build/**",
 ]
+
+[session_persistence]
+enabled = true
+store_path = ".project-pulse-state/sessions.json"
+session_gap_minutes = 90
+max_sessions_per_workspace = 25
 """.strip()
 
 
@@ -119,6 +131,7 @@ class ProjectPulseConfig:
         raw = tomllib.loads(raw_text)
         weights = raw.get("weights", {})
         publisher = raw.get("publisher", {})
+        session_persistence = raw.get("session_persistence", {})
         watched_root = Path(raw.get("watched_root", ".")).expanduser()
         if base_directory is not None and not watched_root.is_absolute():
             watched_root = (base_directory / watched_root).resolve()
@@ -128,6 +141,11 @@ class ProjectPulseConfig:
             target_repo_path = Path(target_repo_path_text).expanduser()
             if base_directory is not None and not target_repo_path.is_absolute():
                 target_repo_path = (base_directory / target_repo_path).resolve()
+        store_path = Path(
+            session_persistence.get("store_path", ".project-pulse-state/sessions.json")
+        ).expanduser()
+        if base_directory is not None and not store_path.is_absolute():
+            store_path = (base_directory / store_path).resolve()
         data = ProjectPulseConfigData(
             watched_root=watched_root,
             lookback_window=timedelta(hours=int(raw.get("lookback_window_hours", 24))),
@@ -161,6 +179,14 @@ class ProjectPulseConfig:
                 push_after_commit=bool(publisher.get("push_after_commit", False)),
                 require_explicit_push=bool(publisher.get("require_explicit_push", True)),
                 exclude_globs=tuple(publisher.get("exclude_globs", [])),
+            ),
+            session_persistence=SessionPersistenceConfig(
+                enabled=bool(session_persistence.get("enabled", True)),
+                store_path=store_path,
+                session_gap_minutes=int(session_persistence.get("session_gap_minutes", 90)),
+                max_sessions_per_workspace=int(
+                    session_persistence.get("max_sessions_per_workspace", 25)
+                ),
             ),
         )
         return cls(data=data)

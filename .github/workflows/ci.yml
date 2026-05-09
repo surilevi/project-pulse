@@ -44,5 +44,10 @@ jobs:
       - name: Smoke test scan command
         run: python -m project_pulse scan --json --root .
 
+      - name: Smoke test session commands
+        run: |
+          python -m project_pulse session-record --workspace .
+          python -m project_pulse session-list --workspace .
+
       - name: Verify source compiles
         run: python -m compileall src

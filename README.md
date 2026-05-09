@@ -37,6 +37,7 @@ The repo ships with `project-pulse.example.toml` and expects your machine-specif
 - `expose_absolute_paths_in_reports`: keep this `false` for public-safe reports
 - `low_signal_directory_names`: generated-output folders to ignore when scoring activity
 - `[publisher]`: opt-in private mirror settings for syncing one workspace into a separate local clone
+- `[session_persistence]`: local-only session store settings for grouping scans into real work sessions
 - `weights`: named contributions to the activity score
 
 ## First commands
@@ -46,6 +47,18 @@ project-pulse scan
 project-pulse scan --json
 project-pulse scan --root .\some-project-root
 ```
+
+## Session Persistence
+
+Session persistence is local-only and enabled by default. It writes to an ignored JSON store so you can turn repeated scans into real work sessions.
+
+```powershell
+project-pulse session-record --workspace .\your-project
+project-pulse session-list
+project-pulse session-list --workspace .\your-project
+```
+
+Sessions continue while new observations stay within `session_gap_minutes`; otherwise a new session starts.
 
 ## Private Publisher
 
@@ -72,6 +85,5 @@ That creates a commit in the private repo clone only if the workspace has meanin
 
 ## Roadmap
 
-- add session persistence
 - add diff summarization
 - add sanitized public portfolio snapshots

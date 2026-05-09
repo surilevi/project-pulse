@@ -37,6 +37,7 @@ ignored_directory_names = [
   "__pycache__",
   ".pytest_cache",
   ".ruff_cache",
+  ".project-pulse-state",
   "dist",
   "build",
 ]
@@ -83,3 +84,9 @@ exclude_globs = [
   "dist/**",
   "build/**",
 ]
+
+[session_persistence]
+enabled = true
+store_path = ".project-pulse-state/sessions.json"
+session_gap_minutes = 90
+max_sessions_per_workspace = 25

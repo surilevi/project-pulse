@@ -26,6 +26,7 @@ project-pulse.local.toml
 reports/
 tmp/
 *.log
+.project-pulse-state/
 
 # Editor and OS noise
 .vscode/

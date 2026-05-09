@@ -25,6 +25,14 @@ class PrivatePublisherConfig:
 
 
 @dataclass(slots=True)
+class SessionPersistenceConfig:
+    enabled: bool
+    store_path: Path
+    session_gap_minutes: int
+    max_sessions_per_workspace: int
+
+
+@dataclass(slots=True)
 class ProjectPulseConfigData:
     watched_root: Path
     lookback_window: timedelta
@@ -42,6 +50,7 @@ class ProjectPulseConfigData:
     project_marker_names: tuple[str, ...]
     weights: ScoreWeights
     publisher: PrivatePublisherConfig
+    session_persistence: SessionPersistenceConfig
 
 
 @dataclass(slots=True)
@@ -128,3 +137,71 @@ class PrivatePublishResult:
     commit_message: str | None
     changed_files: list[str]
     metadata_path: Path
+
+
+@dataclass(slots=True)
+class PersistedSession:
+    session_id: str
+    workspace_root: Path
+    workspace_name: str
+    started_at: datetime
+    updated_at: datetime
+    latest_activity_at: datetime | None
+    last_observed_at: datetime
+    record_count: int
+    recent_file_count: int
+    recent_code_file_count: int
+    workspaces_with_activity: int
+    repositories_with_uncommitted_changes: int
+    repositories_with_recent_commits: int
+    activity_score: int
+    publishable: bool
+    reasons: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["workspace_root"] = str(self.workspace_root)
+        payload["started_at"] = self.started_at.isoformat()
+        payload["updated_at"] = self.updated_at.isoformat()
+        payload["latest_activity_at"] = (
+            self.latest_activity_at.isoformat() if self.latest_activity_at else None
+        )
+        payload["last_observed_at"] = self.last_observed_at.isoformat()
+        return payload
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> PersistedSession:
+        latest_activity_at = payload.get("latest_activity_at")
+        return cls(
+            session_id=str(payload["session_id"]),
+            workspace_root=Path(str(payload["workspace_root"])),
+            workspace_name=str(payload["workspace_name"]),
+            started_at=datetime.fromisoformat(str(payload["started_at"])),
+            updated_at=datetime.fromisoformat(str(payload["updated_at"])),
+            latest_activity_at=(
+                datetime.fromisoformat(str(latest_activity_at))
+                if latest_activity_at
+                else None
+            ),
+            last_observed_at=datetime.fromisoformat(str(payload["last_observed_at"])),
+            record_count=int(payload["record_count"]),
+            recent_file_count=int(payload["recent_file_count"]),
+            recent_code_file_count=int(payload["recent_code_file_count"]),
+            workspaces_with_activity=int(payload["workspaces_with_activity"]),
+            repositories_with_uncommitted_changes=int(
+                payload["repositories_with_uncommitted_changes"]
+            ),
+            repositories_with_recent_commits=int(payload["repositories_with_recent_commits"]),
+            activity_score=int(payload["activity_score"]),
+            publishable=bool(payload["publishable"]),
+            reasons=[str(item) for item in payload.get("reasons", [])],
+            blockers=[str(item) for item in payload.get("blockers", [])],
+        )
+
+
+@dataclass(slots=True)
+class SessionRecordResult:
+    session: PersistedSession
+    created: bool
+    store_path: Path

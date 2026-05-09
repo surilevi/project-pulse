@@ -37,6 +37,9 @@ ABSOLUTE_PATH_SCAN_EXCLUSIONS = {
     ".githooks/pre-commit",
     "src/project_pulse/audit.py",
 }
+LOCAL_ONLY_DIRECTORY_NAMES = {
+    ".project-pulse-state",
+}
 
 
 @dataclass(slots=True)
@@ -127,6 +130,17 @@ def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
     tracked_files = _git_ls_files_all(repo_root)
     for tracked_path in tracked_files:
         normalized = tracked_path.replace("\\", "/")
+        if normalized.startswith(".project-pulse-state/"):
+            findings.append(
+                AuditFinding(
+                    severity="high",
+                    path=tracked_path,
+                    message=(
+                        "tracked session persistence artifacts should not be committed "
+                        "to a public repository"
+                    ),
+                )
+            )
         if re.search(r"(^|/)\.env(\..+)?$", normalized):
             findings.append(
                 AuditFinding(
@@ -141,6 +155,7 @@ def _check_sensitive_tracked_files(repo_root: Path) -> list[AuditFinding]:
 def _scan_working_tree(repo_root: Path, config: ProjectPulseConfig) -> list[AuditFinding]:
     findings: list[AuditFinding] = []
     ignored_dirs = set(config.data.ignored_directory_names)
+    ignored_dirs.update(LOCAL_ONLY_DIRECTORY_NAMES)
     ignored_files = set(config.data.ignored_file_names)
     ignored_files.add("project-pulse.local.toml")
 

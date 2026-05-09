@@ -23,6 +23,13 @@ class FilesystemScanner:
         root = (watched_root or self.config.watched_root).resolve()
         observed_at = datetime.now(UTC)
         workspace_roots = self._discover_workspace_roots(root)
+        if root not in workspace_roots:
+            workspace_roots.append(root)
+            workspace_roots = sorted(
+                workspace_roots,
+                key=lambda item: len(str(item)),
+                reverse=True,
+            )
         git_roots = self._discover_git_roots(root)
         recent_files = self._collect_recent_files(root, observed_at, workspace_roots, git_roots)
         workspaces = self._build_workspace_snapshots(workspace_roots, git_roots, recent_files)
