@@ -65,6 +65,8 @@ Sessions continue while new observations stay within `session_gap_minutes`; othe
 
 If you always open the Codex desktop app when you start coding, Project Pulse can piggyback on that habit.
 
+This integration is currently Windows-only.
+
 Set this in `project-pulse.local.toml`:
 
 ```toml
@@ -78,6 +80,7 @@ state_path = ".project-pulse-state/codex-watcher-state.json"
 
 - Leave `workspace = ""` to record against your full `watched_root`.
 - Set `workspace = "relative/path/inside/watched_root"` if you want Codex opens to always count toward one default project.
+- A Codex-open record is an app-open observation layered on top of the normal scanner. It uses whatever recent activity already exists inside the current lookback window; it does not prove a fresh edit happened after launch.
 
 Manual checks:
 
@@ -86,13 +89,7 @@ project-pulse codex-record-open
 project-pulse codex-watch --max-polls 2
 ```
 
-The intended daily setup is a small hidden background watcher started at Windows sign-in. It only records a local session when `Codex.exe` appears; it does not publish, push, or upload anything on its own.
-
-Windows setup:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install_codex_watcher_startup.ps1
-```
+Project Pulse does not currently ship a Windows startup installer for this feature. Hidden-startup PowerShell launchers are commonly flagged by endpoint protection products, so the Codex integration is intentionally manual for now.
 
 ## Private Publisher
 

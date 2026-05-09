@@ -7,7 +7,7 @@ import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from .config import ProjectPulseConfig
@@ -60,6 +60,9 @@ class CodexWatcherState:
 
 
 class CodexWatcher:
+    STATE_STALE_MULTIPLIER = 3
+    MIN_STATE_STALE_SECONDS = 60
+
     def __init__(
         self,
         config: ProjectPulseConfig,
@@ -91,6 +94,8 @@ class CodexWatcher:
             raise CodexIntegrationError(
                 "Codex integration is disabled; set [codex_integration].enabled = true"
             )
+        if max_polls is not None and max_polls <= 0:
+            return 0
 
         state = self._load_state()
         records_created = 0
@@ -98,6 +103,7 @@ class CodexWatcher:
         while True:
             running = self._is_codex_running()
             now = datetime.now(UTC)
+            state = self._normalize_state(state, now)
 
             if running and not state.codex_running:
                 self.record_open()
@@ -123,6 +129,7 @@ class CodexWatcher:
 
         state = self._load_state()
         now = datetime.now(UTC)
+        state = self._normalize_state(state, now)
         recorded = False
         if running and not state.codex_running:
             self.record_open()
@@ -188,7 +195,12 @@ class CodexWatcher:
             raise CodexIntegrationError(
                 f"Codex watcher state has an invalid shape: {state_path}"
             )
-        return CodexWatcherState.from_dict(payload)
+        try:
+            return CodexWatcherState.from_dict(payload)
+        except ValueError as error:
+            raise CodexIntegrationError(
+                f"Codex watcher state contains invalid timestamps: {state_path}"
+            ) from error
 
     def _save_state(self, state: CodexWatcherState) -> None:
         state_path = self.integration.state_path
@@ -202,3 +214,26 @@ class CodexWatcher:
             raise CodexIntegrationError(
                 f"Codex watcher state could not be written: {state_path}"
             ) from error
+
+    def _normalize_state(
+        self,
+        state: CodexWatcherState,
+        now: datetime,
+    ) -> CodexWatcherState:
+        if not state.codex_running or state.last_seen_at is None:
+            return state
+
+        stale_after = timedelta(
+            seconds=max(
+                self.integration.poll_seconds * self.STATE_STALE_MULTIPLIER,
+                self.MIN_STATE_STALE_SECONDS,
+            )
+        )
+        if (now - state.last_seen_at) <= stale_after:
+            return state
+
+        return CodexWatcherState(
+            codex_running=False,
+            last_seen_at=state.last_seen_at,
+            last_recorded_at=state.last_recorded_at,
+        )

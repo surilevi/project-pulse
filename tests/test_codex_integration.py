@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from project_pulse.codex_integration import CodexWatcher
+import pytest
+
+from project_pulse.codex_integration import CodexIntegrationError, CodexWatcher
 from project_pulse.config import ProjectPulseConfig
 from project_pulse.models import (
     PersistedSession,
@@ -204,3 +206,121 @@ def test_codex_record_open_defaults_to_watched_root(tmp_path: Path) -> None:
 
     assert scanner.calls == [tmp_path.resolve()]
     assert tracker.calls == [tmp_path.resolve()]
+
+
+def test_codex_watcher_treats_stale_running_state_as_closed(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    config = _build_config(tmp_path, codex_workspace="workspace")
+    session = _build_session(workspace_root, datetime.now(UTC))
+    decision = PublishDecision(
+        publishable=True,
+        score=12,
+        metrics={
+            "repositories_with_uncommitted_changes": 0,
+            "repositories_with_recent_commits": 0,
+        },
+    )
+    scanner = _FakeScanner(session)
+    tracker = _FakeTracker(
+        _build_record_result(
+            workspace_root,
+            config.data.session_persistence.store_path,
+        )
+    )
+    state_path = config.data.codex_integration.state_path
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    stale_seen_at = datetime.now(UTC) - timedelta(minutes=5)
+    state_path.write_text(
+        (
+            "{\n"
+            '  "codex_running": true,\n'
+            f'  "last_seen_at": "{stale_seen_at.isoformat()}",\n'
+            f'  "last_recorded_at": "{stale_seen_at.isoformat()}"\n'
+            "}\n"
+        ),
+        encoding="utf-8",
+    )
+    watcher = CodexWatcher(
+        config,
+        scanner=scanner,
+        detector=_FakeDetector(decision),
+        tracker=tracker,
+    )
+
+    assert watcher.observe(True) is True
+    assert tracker.calls == [workspace_root.resolve()]
+
+
+def test_codex_watcher_wraps_invalid_timestamp_state(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    config = _build_config(tmp_path, codex_workspace="workspace")
+    session = _build_session(workspace_root, datetime.now(UTC))
+    decision = PublishDecision(
+        publishable=True,
+        score=12,
+        metrics={
+            "repositories_with_uncommitted_changes": 0,
+            "repositories_with_recent_commits": 0,
+        },
+    )
+    state_path = config.data.codex_integration.state_path
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        (
+            "{\n"
+            '  "codex_running": true,\n'
+            '  "last_seen_at": "not-a-timestamp",\n'
+            '  "last_recorded_at": "still-not-a-timestamp"\n'
+            "}\n"
+        ),
+        encoding="utf-8",
+    )
+    watcher = CodexWatcher(
+        config,
+        scanner=_FakeScanner(session),
+        detector=_FakeDetector(decision),
+        tracker=_FakeTracker(
+            _build_record_result(
+                workspace_root,
+                config.data.session_persistence.store_path,
+            )
+        ),
+    )
+
+    with pytest.raises(CodexIntegrationError, match="invalid timestamps"):
+        watcher.observe(True)
+
+
+def test_codex_watch_with_zero_max_polls_is_a_no_op(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    config = _build_config(tmp_path, codex_workspace="workspace")
+    session = _build_session(workspace_root, datetime.now(UTC))
+    decision = PublishDecision(
+        publishable=True,
+        score=12,
+        metrics={
+            "repositories_with_uncommitted_changes": 0,
+            "repositories_with_recent_commits": 0,
+        },
+    )
+    scanner = _FakeScanner(session)
+    tracker = _FakeTracker(
+        _build_record_result(
+            workspace_root,
+            config.data.session_persistence.store_path,
+        )
+    )
+    watcher = CodexWatcher(
+        config,
+        scanner=scanner,
+        detector=_FakeDetector(decision),
+        tracker=tracker,
+    )
+    watcher._is_codex_running = lambda: (_ for _ in ()).throw(AssertionError("should not poll"))
+
+    assert watcher.watch(max_polls=0) == 0
+    assert scanner.calls == []
+    assert tracker.calls == []
