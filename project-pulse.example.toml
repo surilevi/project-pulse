@@ -90,3 +90,10 @@ enabled = true
 store_path = ".project-pulse-state/sessions.json"
 session_gap_minutes = 90
 max_sessions_per_workspace = 25
+
+[codex_integration]
+enabled = false
+workspace = ""
+process_names = ["Codex.exe", "codex.exe"]
+poll_seconds = 20
+state_path = ".project-pulse-state/codex-watcher-state.json"

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from .audit import render_audit_report, run_public_audit
+from .codex_integration import CodexIntegrationError, CodexWatcher
 from .config import ProjectPulseConfig
 from .policy import MeaningfulChangeDetector
 from .publisher import PrivatePublisherError, PrivateRepoPublisher
@@ -21,6 +22,18 @@ def _display_path(path: Path, root: Path) -> str:
     if str(relative_path) == ".":
         return "."
     return str(relative_path)
+
+
+def _print_session_record(result) -> None:
+    print(f"Workspace: {result.session.workspace_root}")
+    print(f"Session id: {result.session.session_id}")
+    print(f"Store: {_display_path(result.store_path, Path.cwd())}")
+    print(f"Created: {'yes' if result.created else 'no'}")
+    print(f"Started: {result.session.started_at.isoformat()}")
+    print(f"Updated: {result.session.updated_at.isoformat()}")
+    print(f"Records: {result.session.record_count}")
+    print(f"Activity score: {result.session.activity_score}")
+    print(f"Publishable: {'yes' if result.session.publishable else 'no'}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -117,6 +130,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional workspace path to filter persisted sessions.",
     )
+    subparsers.add_parser(
+        "codex-record-open",
+        help="Record one local session using the configured Codex integration workspace.",
+        parents=[config_parent],
+    )
+    codex_watch_parser = subparsers.add_parser(
+        "codex-watch",
+        help="Watch for the Codex desktop app and auto-record sessions on app open.",
+        parents=[config_parent],
+    )
+    codex_watch_parser.add_argument(
+        "--max-polls",
+        type=int,
+        default=None,
+        help="Optional number of polling loops before the watcher exits.",
+    )
     return parser
 
 
@@ -185,15 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         except SessionTrackerError as error:
             parser.exit(1, f"project-pulse session-record: {error}\n")
 
-        print(f"Workspace: {result.session.workspace_root}")
-        print(f"Session id: {result.session.session_id}")
-        print(f"Store: {_display_path(result.store_path, Path.cwd())}")
-        print(f"Created: {'yes' if result.created else 'no'}")
-        print(f"Started: {result.session.started_at.isoformat()}")
-        print(f"Updated: {result.session.updated_at.isoformat()}")
-        print(f"Records: {result.session.record_count}")
-        print(f"Activity score: {result.session.activity_score}")
-        print(f"Publishable: {'yes' if result.session.publishable else 'no'}")
+        _print_session_record(result)
         return 0
 
     if args.command == "session-list":
@@ -215,6 +236,24 @@ def main(argv: list[str] | None = None) -> int:
                 f"records={item.record_count} | score={item.activity_score} | "
                 f"publishable={'yes' if item.publishable else 'no'}"
             )
+        return 0
+
+    if args.command == "codex-record-open":
+        watcher = CodexWatcher(config)
+        try:
+            result = watcher.record_open()
+        except (CodexIntegrationError, SessionTrackerError) as error:
+            parser.exit(1, f"project-pulse codex-record-open: {error}\n")
+
+        _print_session_record(result)
+        return 0
+
+    if args.command == "codex-watch":
+        watcher = CodexWatcher(config)
+        try:
+            watcher.watch(max_polls=args.max_polls)
+        except (CodexIntegrationError, SessionTrackerError) as error:
+            parser.exit(1, f"project-pulse codex-watch: {error}\n")
         return 0
 
     session = scanner.scan(watched_root=args.root)

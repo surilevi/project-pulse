@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from .models import (
+    CodexIntegrationConfig,
     PrivatePublisherConfig,
     ProjectPulseConfigData,
     ScoreWeights,
@@ -108,6 +109,13 @@ enabled = true
 store_path = ".project-pulse-state/sessions.json"
 session_gap_minutes = 90
 max_sessions_per_workspace = 25
+
+[codex_integration]
+enabled = false
+workspace = ""
+process_names = ["Codex.exe", "codex.exe"]
+poll_seconds = 20
+state_path = ".project-pulse-state/codex-watcher-state.json"
 """.strip()
 
 
@@ -132,6 +140,7 @@ class ProjectPulseConfig:
         weights = raw.get("weights", {})
         publisher = raw.get("publisher", {})
         session_persistence = raw.get("session_persistence", {})
+        codex_integration = raw.get("codex_integration", {})
         watched_root = Path(raw.get("watched_root", ".")).expanduser()
         if base_directory is not None and not watched_root.is_absolute():
             watched_root = (base_directory / watched_root).resolve()
@@ -146,6 +155,20 @@ class ProjectPulseConfig:
         ).expanduser()
         if base_directory is not None and not store_path.is_absolute():
             store_path = (base_directory / store_path).resolve()
+        codex_workspace_text = str(codex_integration.get("workspace", "")).strip()
+        codex_workspace: Path | None = None
+        if codex_workspace_text:
+            codex_workspace = Path(codex_workspace_text).expanduser()
+            if not codex_workspace.is_absolute():
+                codex_workspace = (watched_root / codex_workspace).resolve()
+        codex_state_path = Path(
+            codex_integration.get(
+                "state_path",
+                ".project-pulse-state/codex-watcher-state.json",
+            )
+        ).expanduser()
+        if base_directory is not None and not codex_state_path.is_absolute():
+            codex_state_path = (base_directory / codex_state_path).resolve()
         data = ProjectPulseConfigData(
             watched_root=watched_root,
             lookback_window=timedelta(hours=int(raw.get("lookback_window_hours", 24))),
@@ -187,6 +210,13 @@ class ProjectPulseConfig:
                 max_sessions_per_workspace=int(
                     session_persistence.get("max_sessions_per_workspace", 25)
                 ),
+            ),
+            codex_integration=CodexIntegrationConfig(
+                enabled=bool(codex_integration.get("enabled", False)),
+                workspace=codex_workspace,
+                process_names=tuple(codex_integration.get("process_names", [])),
+                poll_seconds=int(codex_integration.get("poll_seconds", 20)),
+                state_path=codex_state_path,
             ),
         )
         return cls(data=data)

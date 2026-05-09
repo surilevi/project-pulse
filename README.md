@@ -38,6 +38,7 @@ The repo ships with `project-pulse.example.toml` and expects your machine-specif
 - `low_signal_directory_names`: generated-output folders to ignore when scoring activity
 - `[publisher]`: opt-in private mirror settings for syncing one workspace into a separate local clone
 - `[session_persistence]`: local-only session store settings for grouping scans into real work sessions
+- `[codex_integration]`: optional local watcher that records a session when the Codex desktop app opens
 - `weights`: named contributions to the activity score
 
 ## First commands
@@ -59,6 +60,39 @@ project-pulse session-list --workspace .\your-project
 ```
 
 Sessions continue while new observations stay within `session_gap_minutes`; otherwise a new session starts.
+
+## Codex Desktop Integration
+
+If you always open the Codex desktop app when you start coding, Project Pulse can piggyback on that habit.
+
+Set this in `project-pulse.local.toml`:
+
+```toml
+[codex_integration]
+enabled = true
+workspace = ""
+process_names = ["Codex.exe", "codex.exe"]
+poll_seconds = 20
+state_path = ".project-pulse-state/codex-watcher-state.json"
+```
+
+- Leave `workspace = ""` to record against your full `watched_root`.
+- Set `workspace = "relative/path/inside/watched_root"` if you want Codex opens to always count toward one default project.
+
+Manual checks:
+
+```powershell
+project-pulse codex-record-open
+project-pulse codex-watch --max-polls 2
+```
+
+The intended daily setup is a small hidden background watcher started at Windows sign-in. It only records a local session when `Codex.exe` appears; it does not publish, push, or upload anything on its own.
+
+Windows setup:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_codex_watcher_startup.ps1
+```
 
 ## Private Publisher
 
