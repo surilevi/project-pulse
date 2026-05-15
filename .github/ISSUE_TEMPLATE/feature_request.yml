@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an improvement to workflows, safety, scanning, or publishing behavior.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      placeholder: I want a simpler way to review meaningful sessions before publishing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      placeholder: Add a session summary command that explains why a session is publishable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Safety or workflow tradeoffs
+      description: Call out any privacy, automation, or GitHub-activity implications.
+      placeholder: This should stay manual-only and avoid hidden background behavior.
+    validations:
+      required: false

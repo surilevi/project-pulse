@@ -114,6 +114,13 @@ That creates a commit in the private repo clone only if the workspace has meanin
 - this repo can use a pre-commit hook that blocks commits with placeholder identity or staged local config
 - use [PUBLIC_REPO_GUIDE.md](PUBLIC_REPO_GUIDE.md) for the first public push workflow
 
+## Project hygiene
+
+- review [CONTRIBUTING.md](CONTRIBUTING.md) before opening pull requests
+- issue templates guide bug reports and feature requests
+- Dependabot keeps Python and GitHub Actions dependencies current
+- CODEOWNERS routes repository review responsibility
+
 ## Roadmap
 
 - add diff summarization

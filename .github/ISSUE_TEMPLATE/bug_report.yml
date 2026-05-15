@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible problem in scanning, sessions, publishing, or CLI behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please avoid posting secrets, private filesystem paths, or local-only config values.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+      placeholder: The session list stayed empty after recording a workspace.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Share the smallest sequence that reproduces the problem.
+      placeholder: |
+        1. Run `project-pulse session-record --workspace ...`
+        2. Run `project-pulse session-list`
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Share OS, Python version, and install method.
+      placeholder: Windows 11, Python 3.11, `pip install -e .`
+    validations:
+      required: true
+
+  - type: textarea
+    id: safety
+    attributes:
+      label: Privacy or safety impact
+      description: Mention whether the bug affects local paths, tracked files, session state, or publishing safety.
+      placeholder: This may expose tracked local state outside `.project-pulse-state`.
+    validations:
+      required: false
