@@ -43,8 +43,8 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Run public safety audit
-        run: python -m project_pulse public-audit
+      - name: Run safety audit
+        run: python -m project_pulse safety-audit
 
       - name: Smoke test scan command
         run: python -m project_pulse scan --json --root .
