@@ -135,3 +135,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [SECURITY
 - diff-aware session summaries
 - richer explanations for why a session passed or failed policy
 - sanitized export formats for reviewed activity snapshots
+
+## License
+
+Project Pulse is released under the [MIT License](LICENSE).
