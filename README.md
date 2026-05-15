@@ -71,28 +71,6 @@ Run the repository safety audit:
 project-pulse safety-audit
 ```
 
-## Codex Desktop Integration
-
-The optional Codex watcher records a session when the Codex desktop app opens. It is Windows-only and manual-only; the repository does not install a startup task.
-
-Example local config:
-
-```toml
-[codex_integration]
-enabled = true
-workspace = ""
-process_names = ["Codex.exe", "codex.exe"]
-poll_seconds = 20
-state_path = ".project-pulse-state/codex-watcher-state.json"
-```
-
-Manual checks:
-
-```powershell
-project-pulse codex-record-open
-project-pulse codex-watch --max-polls 2
-```
-
 ## Private Mirror Publishing
 
 The private publisher is disabled by default. When enabled, it mirrors one reviewed workspace into a separate local clone and commits only the managed mirror path plus metadata.

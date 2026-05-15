@@ -22,7 +22,6 @@ Useful reports include:
 - `project-pulse.local.toml` is ignored by Git
 - `.project-pulse-state/` is ignored by Git
 - reports use relative paths by default
-- Codex integration is manual-only
 - private publishing is disabled by default
 - pushing from the private publisher requires an explicit command or explicit config opt-in
 - safety audit and pre-commit checks look for common local-path, env-file, token, and private-key mistakes

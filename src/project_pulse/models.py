@@ -33,15 +33,6 @@ class SessionPersistenceConfig:
 
 
 @dataclass(slots=True)
-class CodexIntegrationConfig:
-    enabled: bool
-    workspace: Path | None
-    process_names: tuple[str, ...]
-    poll_seconds: int
-    state_path: Path
-
-
-@dataclass(slots=True)
 class ProjectPulseConfigData:
     watched_root: Path
     lookback_window: timedelta
@@ -60,7 +51,6 @@ class ProjectPulseConfigData:
     weights: ScoreWeights
     publisher: PrivatePublisherConfig
     session_persistence: SessionPersistenceConfig
-    codex_integration: CodexIntegrationConfig
 
 
 @dataclass(slots=True)

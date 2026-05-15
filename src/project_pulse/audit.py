@@ -182,7 +182,6 @@ def _configured_local_state_paths(
 ) -> set[str]:
     configured_paths = {
         config.data.session_persistence.store_path.resolve(),
-        config.data.codex_integration.state_path.resolve(),
     }
     relative_paths: set[str] = set()
     for configured_path in configured_paths:

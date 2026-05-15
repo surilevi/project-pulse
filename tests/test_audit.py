@@ -26,9 +26,9 @@ def test_safety_audit_flags_tracked_configured_local_state_file(tmp_path: Path) 
         text=True,
     )
 
-    (repo_root / "codex-state.json").write_text("{}", encoding="utf-8")
+    (repo_root / "sessions.json").write_text("{}", encoding="utf-8")
     subprocess.run(
-        ["git", "add", "codex-state.json"],
+        ["git", "add", "sessions.json"],
         cwd=repo_root,
         check=True,
         capture_output=True,
@@ -66,22 +66,16 @@ require_explicit_push = true
 exclude_globs = []
 [session_persistence]
 enabled = true
-store_path = "{(repo_root / '.project-pulse-state' / 'sessions.json').as_posix()}"
+store_path = "{(repo_root / 'sessions.json').as_posix()}"
 session_gap_minutes = 90
 max_sessions_per_workspace = 25
-[codex_integration]
-enabled = true
-workspace = ""
-process_names = ["Codex.exe"]
-poll_seconds = 20
-state_path = "{(repo_root / 'codex-state.json').as_posix()}"
 """.strip()
     )
 
     findings = run_safety_audit(repo_root, config)
 
     assert any(
-        finding.path == "codex-state.json"
+        finding.path == "sessions.json"
         and "tracked local state file" in finding.message
         for finding in findings
     )

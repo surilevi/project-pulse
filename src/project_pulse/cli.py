@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 from .audit import render_audit_report, run_safety_audit
-from .codex_integration import CodexIntegrationError, CodexWatcher
 from .config import ProjectPulseConfig
 from .models import SessionRecordResult
 from .policy import MeaningfulChangeDetector
@@ -138,22 +137,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional workspace path to filter persisted sessions.",
     )
-    subparsers.add_parser(
-        "codex-record-open",
-        help="Record one local session using the configured Codex integration workspace.",
-        parents=[config_parent],
-    )
-    codex_watch_parser = subparsers.add_parser(
-        "codex-watch",
-        help="Watch for the Codex desktop app and auto-record sessions on app open.",
-        parents=[config_parent],
-    )
-    codex_watch_parser.add_argument(
-        "--max-polls",
-        type=int,
-        default=None,
-        help="Optional number of polling loops before the watcher exits.",
-    )
     return parser
 
 
@@ -250,24 +233,6 @@ def main(argv: list[str] | None = None) -> int:
                 f"records={item.record_count} | score={item.activity_score} | "
                 f"publishable={'yes' if item.publishable else 'no'}"
             )
-        return 0
-
-    if args.command == "codex-record-open":
-        watcher = CodexWatcher(config)
-        try:
-            result = watcher.record_open()
-        except (CodexIntegrationError, SessionTrackerError) as error:
-            parser.exit(1, f"project-pulse codex-record-open: {error}\n")
-
-        _print_session_record(result)
-        return 0
-
-    if args.command == "codex-watch":
-        watcher = CodexWatcher(config)
-        try:
-            watcher.watch(max_polls=args.max_polls)
-        except (CodexIntegrationError, SessionTrackerError) as error:
-            parser.exit(1, f"project-pulse codex-watch: {error}\n")
         return 0
 
     session = scanner.scan(watched_root=args.root)

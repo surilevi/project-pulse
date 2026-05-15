@@ -1,6 +1,5 @@
 """Project Pulse package."""
 
-from .codex_integration import CodexWatcher
 from .config import ProjectPulseConfig
 from .models import (
     PrivatePublishResult,
@@ -10,7 +9,6 @@ from .models import (
 )
 
 __all__ = [
-    "CodexWatcher",
     "PrivatePublishResult",
     "ProjectPulseConfig",
     "PublishDecision",

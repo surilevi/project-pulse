@@ -19,12 +19,6 @@ def test_config_works_after_subcommand() -> None:
     assert args.config == Path("example.toml")
 
 
-def test_codex_watch_parser_accepts_max_polls() -> None:
-    args = build_parser().parse_args(["codex-watch", "--max-polls", "2"])
-    assert args.command == "codex-watch"
-    assert args.max_polls == 2
-
-
 def test_safety_audit_is_primary_audit_command() -> None:
     args = build_parser().parse_args(["safety-audit"])
     assert args.command == "safety-audit"

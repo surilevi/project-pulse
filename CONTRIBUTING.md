@@ -24,7 +24,7 @@ python -m project_pulse safety-audit
 1. Keep changes focused and reviewable.
 2. Update documentation when behavior or commands change.
 3. Add tests for scanner, publisher, session, or audit edge cases.
-4. Explain privacy, security, or workflow tradeoffs when a change touches local paths, persistence, publishing, or process detection.
+4. Explain privacy, security, or workflow tradeoffs when a change touches local paths, persistence, or publishing.
 5. Avoid committing generated output, local state, machine-specific config, or screenshots that reveal private paths.
 
 ## Design Principles
