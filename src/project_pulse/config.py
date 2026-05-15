@@ -235,7 +235,7 @@ class ProjectPulseConfig:
         return cls.from_text(DEFAULT_CONFIG_TEMPLATE, base_directory=base_directory)
 
     @classmethod
-    def load_public_audit_default(cls, base_directory: Path) -> ProjectPulseConfig:
+    def load_safety_audit_default(cls, base_directory: Path) -> ProjectPulseConfig:
         default_config = base_directory / DEFAULT_CONFIG_NAME
         if default_config.exists():
             return cls.load(default_config)

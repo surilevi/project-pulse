@@ -2,7 +2,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Security question
     url: https://github.com/surilevi/project-pulse/blob/main/SECURITY.md
-    about: Read the repository safety and privacy notes before reporting a sensitive issue.
-  - name: Public repo safety guide
-    url: https://github.com/surilevi/project-pulse/blob/main/PUBLIC_REPO_GUIDE.md
-    about: Review the public-repo checklist before asking about publishing safety.
+    about: Read the security policy before reporting a sensitive issue.

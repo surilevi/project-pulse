@@ -3,11 +3,11 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from project_pulse.audit import run_public_audit
+from project_pulse.audit import run_safety_audit
 from project_pulse.config import ProjectPulseConfig
 
 
-def test_public_audit_flags_tracked_configured_local_state_file(tmp_path: Path) -> None:
+def test_safety_audit_flags_tracked_configured_local_state_file(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True, text=True)
@@ -78,7 +78,7 @@ state_path = "{(repo_root / 'codex-state.json').as_posix()}"
 """.strip()
     )
 
-    findings = run_public_audit(repo_root, config)
+    findings = run_safety_audit(repo_root, config)
 
     assert any(
         finding.path == "codex-state.json"
@@ -87,7 +87,7 @@ state_path = "{(repo_root / 'codex-state.json').as_posix()}"
     )
 
 
-def test_public_audit_flags_private_key_text(tmp_path: Path) -> None:
+def test_safety_audit_flags_private_key_text(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True, text=True)
@@ -148,7 +148,7 @@ max_sessions_per_workspace = 25
 """.strip()
     )
 
-    findings = run_public_audit(repo_root, config)
+    findings = run_safety_audit(repo_root, config)
 
     assert any(
         finding.path == "notes.txt"

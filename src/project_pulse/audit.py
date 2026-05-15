@@ -58,7 +58,7 @@ class AuditFinding:
     message: str
 
 
-def run_public_audit(repo_root: Path, config: ProjectPulseConfig) -> list[AuditFinding]:
+def run_safety_audit(repo_root: Path, config: ProjectPulseConfig) -> list[AuditFinding]:
     findings: list[AuditFinding] = []
     findings.extend(_check_git_identity(repo_root))
     findings.extend(_check_ignored_local_config(repo_root))
@@ -69,9 +69,9 @@ def run_public_audit(repo_root: Path, config: ProjectPulseConfig) -> list[AuditF
 
 def render_audit_report(findings: list[AuditFinding]) -> str:
     if not findings:
-        return "Public audit passed: no obvious repo-safety issues found."
+        return "Safety audit passed: no obvious repository safety issues found."
 
-    lines = ["Public audit findings"]
+    lines = ["Safety audit findings"]
     for finding in findings:
         lines.append(f"- [{finding.severity}] {finding.path}: {finding.message}")
     return "\n".join(lines)
@@ -150,7 +150,7 @@ def _check_sensitive_tracked_files(
                     path=tracked_path,
                     message=(
                         "tracked session persistence artifacts should not be committed "
-                        "to a public repository"
+                        "to a shared repository"
                     ),
                 )
             )
@@ -161,7 +161,7 @@ def _check_sensitive_tracked_files(
                     path=tracked_path,
                     message=(
                         "tracked local state file should not be committed "
-                        "to a public repository"
+                        "to a shared repository"
                     ),
                 )
             )
@@ -170,7 +170,7 @@ def _check_sensitive_tracked_files(
                 AuditFinding(
                     severity="high",
                     path=tracked_path,
-                    message="tracked env file should not be committed to a public repository",
+                    message="tracked env file should not be committed to a shared repository",
                 )
             )
     return findings

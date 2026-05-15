@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from .audit import render_audit_report, run_public_audit
+from .audit import render_audit_report, run_safety_audit
 from .codex_integration import CodexIntegrationError, CodexWatcher
 from .config import ProjectPulseConfig
 from .policy import MeaningfulChangeDetector
@@ -67,11 +67,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Render the scan result as JSON.",
     )
-    subparsers.add_parser(
-        "public-audit",
-        help="Scan the repository for obvious publish-safety issues before going public.",
+    safety_audit_parser = subparsers.add_parser(
+        "safety-audit",
+        help="Scan the repository for obvious path, config, and secret-safety issues.",
         parents=[config_parent],
     )
+    safety_audit_parser.set_defaults(command="safety-audit")
+    legacy_audit_parser = subparsers.add_parser(
+        "public-audit",
+        help="Compatibility alias for safety-audit.",
+        parents=[config_parent],
+    )
+    legacy_audit_parser.set_defaults(command="safety-audit")
     publish_parser = subparsers.add_parser(
         "publish-private",
         help="Mirror one workspace into a separate local clone of a private repo.",
@@ -155,8 +162,8 @@ def main(argv: list[str] | None = None) -> int:
 
     config_arg = getattr(args, "config", None)
     if config_arg is None:
-        if args.command == "public-audit":
-            config = ProjectPulseConfig.load_public_audit_default(Path.cwd())
+        if args.command == "safety-audit":
+            config = ProjectPulseConfig.load_safety_audit_default(Path.cwd())
         else:
             config = ProjectPulseConfig.load_default(Path.cwd())
     else:
@@ -167,8 +174,8 @@ def main(argv: list[str] | None = None) -> int:
     scanner = FilesystemScanner(config.data)
     detector = MeaningfulChangeDetector(config.data)
 
-    if args.command == "public-audit":
-        findings = run_public_audit(Path.cwd(), config)
+    if args.command == "safety-audit":
+        findings = run_safety_audit(Path.cwd(), config)
         print(render_audit_report(findings))
         return 1 if findings else 0
 

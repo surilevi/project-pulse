@@ -1,47 +1,55 @@
 # Project Pulse
 
-`Project Pulse` is a local-first scanner that watches your real work under a chosen root directory and turns it into an explainable publishing recommendation.
+[![CI](https://github.com/surilevi/project-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/surilevi/project-pulse/actions/workflows/ci.yml)
 
-The current version focuses on the part that matters most for a trustworthy system:
+`Project Pulse` is a local-first activity scanner for turning recent filesystem and Git activity into explainable work-session decisions.
 
-- discover recent file activity
-- detect project workspaces and optional Git evidence
-- score work sessions using named policy inputs instead of hidden constants
-- explain why a session should or should not be published
-- optionally mirror one workspace into a separate local clone of a private repo
+It is designed for developers who work across local folders, experiments, and private repositories, and want a reviewable signal of what changed recently without uploading raw workspace data by default.
 
-## Why this exists
+## Features
 
-If you do most of your work on your laptop, GitHub can under-report how much you actually ship. This tool is meant to bridge that gap honestly by reflecting genuine activity rather than fabricating it.
+- discovers active project workspaces under a configured root
+- scores recent file activity, code-like changes, and Git signals
+- explains why a workspace does or does not pass the current policy
+- stores local session summaries in an ignored state directory
+- optionally mirrors a reviewed workspace snapshot into a separate private repository clone
+- includes audit checks for common path, config, and secret-leak mistakes
 
-## Quick start
+## Quick Start
 
 ```powershell
 pip install -e .
 Copy-Item project-pulse.example.toml project-pulse.local.toml
-# Edit project-pulse.local.toml and set watched_root to your real projects folder.
 project-pulse scan
-python -m project_pulse public-audit
 ```
+
+Edit `project-pulse.local.toml` when you want to scan a different root directory or tune the scoring thresholds.
 
 ## Configuration
 
-The repo ships with `project-pulse.example.toml` and expects your machine-specific settings in `project-pulse.local.toml`, which is ignored by Git. Important inputs:
+Project Pulse reads configuration in this order:
 
-- `watched_root`: the main directory to scan
-- `lookback_window_hours`: how far back the scanner treats activity as part of the current work session
-- `minimum_recent_files`: minimum file activity before a session becomes publish-worthy
-- `minimum_recent_code_files`: minimum code-like file changes before code work counts as meaningful
-- `minimum_workspaces_with_activity`: minimum number of active project roots in the session
-- `minimum_activity_score`: overall threshold produced by weighted signals
-- `expose_absolute_paths_in_reports`: keep this `false` for public-safe reports
-- `low_signal_directory_names`: generated-output folders to ignore when scoring activity
-- `[publisher]`: opt-in private mirror settings for syncing one workspace into a separate local clone
-- `[session_persistence]`: local-only session store settings for grouping scans into real work sessions
-- `[codex_integration]`: optional local watcher that records a session when the Codex desktop app opens
-- `weights`: named contributions to the activity score
+1. `project-pulse.local.toml`
+2. `project-pulse.toml`
+3. `project-pulse.example.toml`
+4. built-in defaults
 
-## First commands
+Machine-specific settings belong in `project-pulse.local.toml`, which is ignored by Git.
+
+Important settings:
+
+- `watched_root`: root directory to scan
+- `lookback_window_hours`: activity window for the current scan
+- `minimum_recent_files`: minimum recent file count
+- `minimum_recent_code_files`: minimum code-like recent file count
+- `minimum_activity_score`: weighted score threshold
+- `require_git_signal`: require uncommitted changes or recent commits
+- `expose_absolute_paths_in_reports`: keep `false` unless absolute paths are intentional
+- `low_signal_directory_names`: generated-output folders to ignore
+
+## Commands
+
+Run a scan:
 
 ```powershell
 project-pulse scan
@@ -49,9 +57,7 @@ project-pulse scan --json
 project-pulse scan --root .\some-project-root
 ```
 
-## Session Persistence
-
-Session persistence is local-only and enabled by default. It writes to an ignored JSON store so you can turn repeated scans into real work sessions.
+Record and list local sessions:
 
 ```powershell
 project-pulse session-record --workspace .\your-project
@@ -59,15 +65,17 @@ project-pulse session-list
 project-pulse session-list --workspace .\your-project
 ```
 
-Sessions continue while new observations stay within `session_gap_minutes`; otherwise a new session starts.
+Run the repository safety audit:
+
+```powershell
+project-pulse safety-audit
+```
 
 ## Codex Desktop Integration
 
-If you always open the Codex desktop app when you start coding, Project Pulse can piggyback on that habit.
+The optional Codex watcher records a session when the Codex desktop app opens. It is Windows-only and manual-only; the repository does not install a startup task.
 
-This integration is currently Windows-only.
-
-Set this in `project-pulse.local.toml`:
+Example local config:
 
 ```toml
 [codex_integration]
@@ -78,10 +86,6 @@ poll_seconds = 20
 state_path = ".project-pulse-state/codex-watcher-state.json"
 ```
 
-- Leave `workspace = ""` to record against your full `watched_root`.
-- Set `workspace = "relative/path/inside/watched_root"` if you want Codex opens to always count toward one default project.
-- A Codex-open record is an app-open observation layered on top of the normal scanner. It uses whatever recent activity already exists inside the current lookback window; it does not prove a fresh edit happened after launch.
-
 Manual checks:
 
 ```powershell
@@ -89,39 +93,45 @@ project-pulse codex-record-open
 project-pulse codex-watch --max-polls 2
 ```
 
-Project Pulse does not currently ship a Windows startup installer for this feature. Hidden-startup PowerShell launchers are commonly flagged by endpoint protection products, so the Codex integration is intentionally manual for now.
+## Private Mirror Publishing
 
-## Private Publisher
+The private publisher is disabled by default. When enabled, it mirrors one reviewed workspace into a separate local clone and commits only the managed mirror path plus metadata.
 
-The private publisher is disabled by default. It is meant for a review-first workflow:
+Recommended workflow:
 
-1. Clone a private GitHub repo somewhere outside your watched workspace tree.
-2. Set `[publisher].enabled = true` and point `target_repo_path` at that local clone.
-3. Pick a safe `mirror_subdirectory` such as `workspace`.
-4. Run:
+1. Clone the target private repository outside the watched workspace tree.
+2. Set `[publisher].enabled = true` and configure `target_repo_path`.
+3. Keep `mirror_subdirectory` relative, for example `workspace`.
+4. Run `project-pulse publish-private --workspace .\your-project`.
+5. Add `--push` only when the mirrored commit should be pushed immediately.
+
+The publisher rejects unsafe path layouts, requires a clean target repository, and filters configured local-only files such as `.env`, `.env.*`, and `project-pulse.local.toml`.
+
+## Safety Model
+
+Project Pulse is built around explicit local review:
+
+- reports use relative paths by default
+- session state lives under `.project-pulse-state/`
+- local config and common generated artifacts are ignored
+- networked publishing is opt-in
+- `project-pulse safety-audit` checks for common local-path, email, env-file, and token mistakes
+- the optional pre-commit hook blocks staged local config, obvious local machine paths, and common secret patterns
+
+## Development
 
 ```powershell
-project-pulse publish-private --workspace .\your-project
+pip install -e .[dev]
+git config core.hooksPath .githooks
+python -m ruff check src tests
+python -m pytest
+python -m project_pulse safety-audit
 ```
 
-That creates a commit in the private repo clone only if the workspace has meaningful changes after filtering. Add `--push` only when you want to publish immediately.
-
-## Public repo safety
-
-- keep `project-pulse.local.toml` local only
-- reports use relative paths by default to avoid leaking your full filesystem layout
-- review [SECURITY.md](SECURITY.md) before publishing or adding export features
-- this repo can use a pre-commit hook that blocks commits with placeholder identity or staged local config
-- use [PUBLIC_REPO_GUIDE.md](PUBLIC_REPO_GUIDE.md) for the first public push workflow
-
-## Project hygiene
-
-- review [CONTRIBUTING.md](CONTRIBUTING.md) before opening pull requests
-- issue templates guide bug reports and feature requests
-- Dependabot keeps Python and GitHub Actions dependencies current
-- CODEOWNERS routes repository review responsibility
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [SECURITY.md](SECURITY.md) for the security policy.
 
 ## Roadmap
 
-- add diff summarization
-- add sanitized public portfolio snapshots
+- diff-aware session summaries
+- richer explanations for why a session passed or failed policy
+- sanitized export formats for reviewed activity snapshots

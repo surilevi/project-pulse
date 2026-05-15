@@ -1,23 +1,36 @@
-# Security Notes
+# Security Policy
 
-`Project Pulse` scans local filesystem activity, so privacy defaults matter.
+`Project Pulse` reads local filesystem metadata and can write local session state. Security and privacy issues are treated as core product issues, not secondary maintenance tasks.
 
-## Safe defaults in this repo
+## Supported Version
 
-- machine-specific settings live in `project-pulse.local.toml`, which is ignored by Git
-- the committed config file is a generic example with no personal paths
-- CLI reports render paths relative to the watched root by default
-- common local artifacts such as caches, logs, and virtual environments are ignored by Git
-- Codex integration is manual-only; the repo does not ship a startup launcher for it
+Security fixes target the current `main` branch.
 
-## Before publishing
+## Reporting
 
-- review `git status` carefully before every commit
-- keep `project-pulse.local.toml` out of version control
-- avoid committing generated reports if they contain private project names
-- use a public-safe Git author identity for this repository
-- inspect future features that push or export data so they do not include raw local paths unless explicitly enabled
+Please do not post secrets, tokens, raw local configuration, or full private filesystem paths in public issues. If a report needs sensitive detail, share the smallest sanitized reproduction first and coordinate privately with the maintainer before sending raw data.
 
-## Threat model
+Useful reports include:
 
-This project is designed to help you reason about local work, not to upload your filesystem state automatically. Any future publisher integration should default to explicit opt-in behavior and sanitized outputs.
+- a minimal command sequence
+- operating system and Python version
+- sanitized config fields relevant to the issue
+- whether the problem affects scanning, session state, audit checks, or publishing
+
+## Safety Defaults
+
+- `project-pulse.local.toml` is ignored by Git
+- `.project-pulse-state/` is ignored by Git
+- reports use relative paths by default
+- Codex integration is manual-only
+- private publishing is disabled by default
+- pushing from the private publisher requires an explicit command or explicit config opt-in
+- safety audit and pre-commit checks look for common local-path, env-file, token, and private-key mistakes
+
+## Operational Guidance
+
+- Review generated reports before sharing them.
+- Keep local config and session state out of version control.
+- Use a separate private repository clone as the publisher target.
+- Verify the target repository remote before using `publish-private --push`.
+- Treat new export or publishing features as security-sensitive by default.

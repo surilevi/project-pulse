@@ -1,43 +1,36 @@
 # Contributing
 
-Thanks for helping improve `Project Pulse`.
+Thanks for helping improve `Project Pulse`. The project is small, local-first, and privacy-sensitive, so changes should stay easy to review and conservative around filesystem data.
 
-## Ground rules
-
-- Keep privacy and local-safety defaults intact.
-- Do not commit `project-pulse.local.toml`, `.project-pulse-state/`, or other machine-local artifacts.
-- Prefer small, reviewable pull requests over broad refactors.
-- If a feature affects publishing, scanning, or persistence, explain the safety impact in the pull request.
-
-## Local setup
+## Development Setup
 
 ```powershell
 pip install -e .[dev]
 git config core.hooksPath .githooks
-python -m ruff check src tests
-python -m pytest
-python -m project_pulse public-audit
 ```
 
-## Before opening a pull request
+## Quality Checks
 
-1. Make sure tests pass locally.
-2. Run `project-pulse public-audit`.
-3. Read `git diff --cached` before committing.
-4. Update docs when behavior changes.
-5. Call out privacy, security, or workflow tradeoffs in the PR description.
+Run the full local check set before opening a pull request:
 
-## Good contribution targets
+```powershell
+python -m ruff check src tests
+python -m pytest
+python -m project_pulse safety-audit
+```
 
-- scanner accuracy improvements
-- safer publisher behavior
-- better session explanations
-- clearer docs and onboarding
-- stronger tests for edge cases
+## Pull Request Guidelines
 
-## Please avoid
+1. Keep changes focused and reviewable.
+2. Update documentation when behavior or commands change.
+3. Add tests for scanner, publisher, session, or audit edge cases.
+4. Explain privacy, security, or workflow tradeoffs when a change touches local paths, persistence, publishing, or process detection.
+5. Avoid committing generated output, local state, machine-specific config, or screenshots that reveal private paths.
 
-- hidden background automation
-- silent networked behavior
-- features that expose raw local paths by default
-- fake activity generation or misleading contribution inflation
+## Design Principles
+
+- Default to local-only behavior.
+- Prefer explicit commands over background automation.
+- Keep reports relative-path friendly unless the user opts into absolute paths.
+- Treat publishing as a review step, not an automatic side effect.
+- Make scoring and decisions explainable from named inputs.
