@@ -1,14 +1,14 @@
 # Public Repo Guide
 
-This guide is for publishing `Project Pulse` safely as your first public repository.
+This guide is for keeping `Project Pulse` safe and professional as a public repository.
 
-## Before you publish
+## Before each public push
 
 1. Keep `project-pulse.local.toml` local only.
-2. From the repository root, run `python -m project_pulse public-audit`.
+2. Run `python -m project_pulse public-audit` from the repository root.
 3. Read `git status --short --ignored` and make sure you understand every tracked file.
-4. Make sure your repo-local Git email is your GitHub-provided `noreply` email, not a personal email.
-5. Decide whether you want a software license before the first public push.
+4. Read `git diff --cached` before every commit.
+5. Make sure your repo-local Git email is your GitHub-provided `noreply` email, not a personal email.
 
 ## Set a safe commit identity
 
@@ -22,47 +22,19 @@ In this repository:
 
 ```powershell
 cd path\to\project-pulse
-git config user.name "Suranyi Levente"
+git config user.name "Your Public Name"
 git config user.email "PASTE_YOUR_GITHUB_NOREPLY_EMAIL_HERE"
 project-pulse public-audit
 ```
 
-## Create the repository on GitHub
+## Ongoing safety checks
 
-Open [Create a new repository](https://github.com/new) and use:
-
-- Owner: `surilevi`
-- Repository name: `project-pulse`
-- Visibility: `Public`
-
-Important:
-
-- Do not add a README on GitHub.
-- Do not add a `.gitignore` on GitHub.
-- Do not add a license on GitHub unless you want to decide the license right now.
-
-The local repo already has files, so letting GitHub pre-populate it can create an unnecessary merge situation.
-
-## First publish from your machine
-
-After the GitHub repo exists and your local email is set:
-
-```powershell
-cd path\to\project-pulse
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/surilevi/project-pulse.git
-git push -u origin main
-```
-
-## After the first push
-
-Check these pages on GitHub:
+Check these regularly on GitHub:
 
 1. Repository home page
 2. `Commits` page
-3. `Settings` -> `General`
-4. `Settings` -> `Security`
+3. `Security` tab
+4. `Settings` -> `General`
 
 Confirm:
 
@@ -71,12 +43,13 @@ Confirm:
 - no local config file was uploaded
 - no secrets or tokens were committed
 
-## Good first security habits
+## Good public-repo habits
 
 - Keep `Keep my email addresses private` enabled.
 - Prefer repo-local Git config for public repos.
 - Run `project-pulse public-audit` before pushes.
-- Read `git diff --cached` before every commit.
+- Use pull requests for non-trivial changes when possible.
+- Keep documentation aligned with the actual shipped workflow.
 - If you accidentally commit sensitive data, rotate the secret first, then clean the Git history.
 
 ## If you accidentally leak something

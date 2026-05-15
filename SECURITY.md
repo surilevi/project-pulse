@@ -8,6 +8,7 @@
 - the committed config file is a generic example with no personal paths
 - CLI reports render paths relative to the watched root by default
 - common local artifacts such as caches, logs, and virtual environments are ignored by Git
+- Codex integration is manual-only; the repo does not ship a startup launcher for it
 
 ## Before publishing
 
