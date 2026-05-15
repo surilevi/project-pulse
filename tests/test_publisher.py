@@ -4,6 +4,8 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from project_pulse.config import ProjectPulseConfig
 from project_pulse.models import PublishDecision, WorkSession
 from project_pulse.publisher import PrivatePublisherError, PrivateRepoPublisher
@@ -212,3 +214,42 @@ exclude_globs = [".env", ".env.*", "project-pulse.local.toml"]
     assert publisher._matches_exclude(Path("nested/.env.local"))
     assert publisher._matches_exclude(Path("nested/.env"))
     assert publisher._matches_exclude(Path("nested/project-pulse.local.toml"))
+
+
+def test_private_publisher_rejects_invalid_branch_name(tmp_path: Path) -> None:
+    target_repo = tmp_path / "private-repo"
+    subprocess.run(["git", "init", "-b", "main", str(target_repo)], check=True)
+    config = ProjectPulseConfig.from_text(
+        f"""
+watched_root = "{tmp_path.as_posix()}"
+lookback_window_hours = 24
+minimum_recent_files = 4
+minimum_recent_code_files = 2
+minimum_workspaces_with_activity = 1
+minimum_activity_score = 12
+maximum_reported_files = 12
+require_git_signal = false
+expose_absolute_paths_in_reports = false
+high_signal_extensions = [".py"]
+ignored_directory_names = [".git"]
+low_signal_directory_names = []
+ignored_file_names = []
+project_marker_names = ["pyproject.toml"]
+[weights]
+recent_file = 1
+recent_code_file = 3
+repository_with_uncommitted_changes = 4
+repository_with_recent_commit = 5
+[publisher]
+enabled = true
+target_repo_path = "{target_repo.as_posix()}"
+mirror_subdirectory = "workspace"
+commit_message_prefix = "pulse"
+push_after_commit = false
+require_explicit_push = true
+exclude_globs = []
+""".strip()
+    )
+
+    with pytest.raises(PrivatePublisherError, match="invalid publisher branch name"):
+        PrivateRepoPublisher(config)._ensure_valid_branch_name(target_repo, "bad branch")

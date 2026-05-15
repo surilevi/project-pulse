@@ -4,11 +4,18 @@ version = "0.1.0"
 description = "Local-first activity scanner for turning real laptop work into explainable publishing decisions."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+keywords = ["activity-tracking", "cli", "developer-tools", "local-first", "privacy"]
 dependencies = []
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +37,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/project_pulse"]
+artifacts = ["src/project_pulse/py.typed"]
 
 [tool.ruff]
 target-version = "py311"
@@ -37,7 +45,7 @@ src = ["src"]
 line-length = 99
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "ARG", "C4", "PT", "RET", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

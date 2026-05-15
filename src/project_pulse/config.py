@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
+from typing import TypeVar
 
 from .models import (
     CodexIntegrationConfig,
@@ -16,6 +18,7 @@ from .models import (
 DEFAULT_CONFIG_NAME = "project-pulse.toml"
 LOCAL_CONFIG_NAME = "project-pulse.local.toml"
 EXAMPLE_CONFIG_NAME = "project-pulse.example.toml"
+T = TypeVar("T")
 DEFAULT_CONFIG_TEMPLATE = """
 watched_root = "."
 lookback_window_hours = 24
@@ -171,51 +174,105 @@ class ProjectPulseConfig:
             codex_state_path = (base_directory / codex_state_path).resolve()
         data = ProjectPulseConfigData(
             watched_root=watched_root,
-            lookback_window=timedelta(hours=int(raw.get("lookback_window_hours", 24))),
-            minimum_recent_files=int(raw.get("minimum_recent_files", 4)),
-            minimum_recent_code_files=int(raw.get("minimum_recent_code_files", 2)),
-            minimum_workspaces_with_activity=int(raw.get("minimum_workspaces_with_activity", 1)),
-            minimum_activity_score=int(raw.get("minimum_activity_score", 12)),
-            maximum_reported_files=int(raw.get("maximum_reported_files", 12)),
-            require_git_signal=bool(raw.get("require_git_signal", False)),
-            expose_absolute_paths_in_reports=bool(
-                raw.get("expose_absolute_paths_in_reports", False)
+            lookback_window=timedelta(
+                hours=_get_int(raw, "lookback_window_hours", 24)
             ),
-            high_signal_extensions=tuple(raw.get("high_signal_extensions", [])),
-            ignored_directory_names=tuple(raw.get("ignored_directory_names", [])),
-            low_signal_directory_names=tuple(raw.get("low_signal_directory_names", [])),
-            ignored_file_names=tuple(raw.get("ignored_file_names", [])),
-            project_marker_names=tuple(raw.get("project_marker_names", [])),
+            minimum_recent_files=_get_int(raw, "minimum_recent_files", 4),
+            minimum_recent_code_files=_get_int(raw, "minimum_recent_code_files", 2),
+            minimum_workspaces_with_activity=_get_int(
+                raw,
+                "minimum_workspaces_with_activity",
+                1,
+            ),
+            minimum_activity_score=_get_int(raw, "minimum_activity_score", 12),
+            maximum_reported_files=_get_int(raw, "maximum_reported_files", 12),
+            require_git_signal=_get_bool(raw, "require_git_signal", False),
+            expose_absolute_paths_in_reports=_get_bool(
+                raw,
+                "expose_absolute_paths_in_reports",
+                False,
+            ),
+            high_signal_extensions=_get_str_tuple(raw, "high_signal_extensions", ()),
+            ignored_directory_names=_get_str_tuple(raw, "ignored_directory_names", ()),
+            low_signal_directory_names=_get_str_tuple(raw, "low_signal_directory_names", ()),
+            ignored_file_names=_get_str_tuple(raw, "ignored_file_names", ()),
+            project_marker_names=_get_str_tuple(raw, "project_marker_names", ()),
             weights=ScoreWeights(
-                recent_file=int(weights.get("recent_file", 1)),
-                recent_code_file=int(weights.get("recent_code_file", 3)),
-                repository_with_uncommitted_changes=int(
-                    weights.get("repository_with_uncommitted_changes", 4)
+                recent_file=_get_int(weights, "recent_file", 1, section="weights"),
+                recent_code_file=_get_int(weights, "recent_code_file", 3, section="weights"),
+                repository_with_uncommitted_changes=_get_int(
+                    weights,
+                    "repository_with_uncommitted_changes",
+                    4,
+                    section="weights",
                 ),
-                repository_with_recent_commit=int(weights.get("repository_with_recent_commit", 5)),
+                repository_with_recent_commit=_get_int(
+                    weights,
+                    "repository_with_recent_commit",
+                    5,
+                    section="weights",
+                ),
             ),
             publisher=PrivatePublisherConfig(
-                enabled=bool(publisher.get("enabled", False)),
+                enabled=_get_bool(publisher, "enabled", False, section="publisher"),
                 target_repo_path=target_repo_path,
                 mirror_subdirectory=Path(publisher.get("mirror_subdirectory", ".")),
                 commit_message_prefix=str(publisher.get("commit_message_prefix", "pulse")),
-                push_after_commit=bool(publisher.get("push_after_commit", False)),
-                require_explicit_push=bool(publisher.get("require_explicit_push", True)),
-                exclude_globs=tuple(publisher.get("exclude_globs", [])),
+                push_after_commit=_get_bool(
+                    publisher,
+                    "push_after_commit",
+                    False,
+                    section="publisher",
+                ),
+                require_explicit_push=_get_bool(
+                    publisher,
+                    "require_explicit_push",
+                    True,
+                    section="publisher",
+                ),
+                exclude_globs=_get_str_tuple(publisher, "exclude_globs", (), section="publisher"),
             ),
             session_persistence=SessionPersistenceConfig(
-                enabled=bool(session_persistence.get("enabled", True)),
+                enabled=_get_bool(
+                    session_persistence,
+                    "enabled",
+                    True,
+                    section="session_persistence",
+                ),
                 store_path=store_path,
-                session_gap_minutes=int(session_persistence.get("session_gap_minutes", 90)),
-                max_sessions_per_workspace=int(
-                    session_persistence.get("max_sessions_per_workspace", 25)
+                session_gap_minutes=_get_int(
+                    session_persistence,
+                    "session_gap_minutes",
+                    90,
+                    section="session_persistence",
+                ),
+                max_sessions_per_workspace=_get_int(
+                    session_persistence,
+                    "max_sessions_per_workspace",
+                    25,
+                    section="session_persistence",
                 ),
             ),
             codex_integration=CodexIntegrationConfig(
-                enabled=bool(codex_integration.get("enabled", False)),
+                enabled=_get_bool(
+                    codex_integration,
+                    "enabled",
+                    False,
+                    section="codex_integration",
+                ),
                 workspace=codex_workspace,
-                process_names=tuple(codex_integration.get("process_names", [])),
-                poll_seconds=int(codex_integration.get("poll_seconds", 20)),
+                process_names=_get_str_tuple(
+                    codex_integration,
+                    "process_names",
+                    (),
+                    section="codex_integration",
+                ),
+                poll_seconds=_get_int(
+                    codex_integration,
+                    "poll_seconds",
+                    20,
+                    section="codex_integration",
+                ),
                 state_path=codex_state_path,
             ),
         )
@@ -243,3 +300,78 @@ class ProjectPulseConfig:
         if example_config.exists():
             return cls.load(example_config)
         return cls.from_text(DEFAULT_CONFIG_TEMPLATE, base_directory=base_directory)
+
+
+def _setting_name(key: str, section: str | None) -> str:
+    return f"{section}.{key}" if section else key
+
+
+def _get_typed(
+    values: dict[str, object],
+    key: str,
+    default: T,
+    expected_type: type | tuple[type, ...],
+    *,
+    section: str | None = None,
+    validator: Callable[[object], bool] | None = None,
+) -> T:
+    value = values.get(key, default)
+    if not isinstance(value, expected_type) or (validator is not None and not validator(value)):
+        expected = (
+            "a list of strings"
+            if validator is _is_str_list
+            else expected_type.__name__
+            if isinstance(expected_type, type)
+            else " or ".join(item.__name__ for item in expected_type)
+        )
+        raise ValueError(f"{_setting_name(key, section)} must be {expected}")
+    return value
+
+
+def _get_bool(
+    values: dict[str, object],
+    key: str,
+    default: bool,
+    *,
+    section: str | None = None,
+) -> bool:
+    return _get_typed(values, key, default, bool, section=section)
+
+
+def _get_int(
+    values: dict[str, object],
+    key: str,
+    default: int,
+    *,
+    section: str | None = None,
+) -> int:
+    return _get_typed(
+        values,
+        key,
+        default,
+        int,
+        section=section,
+        validator=lambda value: not isinstance(value, bool),
+    )
+
+
+def _get_str_tuple(
+    values: dict[str, object],
+    key: str,
+    default: tuple[str, ...],
+    *,
+    section: str | None = None,
+) -> tuple[str, ...]:
+    value = _get_typed(
+        values,
+        key,
+        list(default),
+        list,
+        section=section,
+        validator=_is_str_list,
+    )
+    return tuple(value)
+
+
+def _is_str_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)

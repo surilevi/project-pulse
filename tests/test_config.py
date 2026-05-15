@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from project_pulse.config import ProjectPulseConfig
 
 
@@ -47,3 +49,23 @@ exclude_globs = []
     config = ProjectPulseConfig.load(config_path)
 
     assert config.data.watched_root == project_dir.resolve()
+
+
+def test_config_rejects_string_boolean() -> None:
+    with pytest.raises(ValueError, match="require_git_signal must be bool"):
+        ProjectPulseConfig.from_text(
+            """
+watched_root = "."
+require_git_signal = "false"
+""".strip()
+        )
+
+
+def test_config_rejects_non_string_list_values() -> None:
+    with pytest.raises(ValueError, match="ignored_directory_names must be a list of strings"):
+        ProjectPulseConfig.from_text(
+            """
+watched_root = "."
+ignored_directory_names = [".git", 123]
+""".strip()
+        )

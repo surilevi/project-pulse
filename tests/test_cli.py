@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from project_pulse.cli import build_parser
+import pytest
+
+from project_pulse.cli import build_parser, main
 
 
 def test_config_works_before_subcommand() -> None:
@@ -31,3 +33,21 @@ def test_safety_audit_is_primary_audit_command() -> None:
 def test_legacy_audit_alias_maps_to_safety_audit() -> None:
     args = build_parser().parse_args(["public-audit"])
     assert args.command == "safety-audit"
+
+
+def test_invalid_config_reports_clean_cli_error(tmp_path: Path, capsys) -> None:
+    config_path = tmp_path / "project-pulse.toml"
+    config_path.write_text(
+        """
+watched_root = "."
+require_git_signal = "false"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as raised:
+        main(["--config", str(config_path), "scan"])
+
+    assert raised.value.code == 2
+    captured = capsys.readouterr()
+    assert "project-pulse: invalid config: require_git_signal must be bool" in captured.err

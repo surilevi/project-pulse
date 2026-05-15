@@ -61,6 +61,7 @@ class PrivateRepoPublisher:
             raise PrivatePublisherError("publisher mirror_subdirectory must be relative")
 
         if branch:
+            self._ensure_valid_branch_name(target_repo, branch)
             self._switch_branch(target_repo, branch)
         active_branch = branch or self._current_branch(target_repo)
 
@@ -248,6 +249,17 @@ class PrivateRepoPublisher:
 
     def _current_branch(self, repo_root: Path) -> str:
         return self._git(repo_root, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+
+    def _ensure_valid_branch_name(self, repo_root: Path, branch: str) -> None:
+        if not branch.strip():
+            raise PrivatePublisherError("publisher branch name cannot be empty")
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "check-ref-format", "--branch", branch],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise PrivatePublisherError(f"invalid publisher branch name: {branch}")
 
     def _switch_branch(self, repo_root: Path, branch: str) -> None:
         verify = subprocess.run(

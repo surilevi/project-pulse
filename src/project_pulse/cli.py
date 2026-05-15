@@ -7,6 +7,7 @@ from pathlib import Path
 from .audit import render_audit_report, run_safety_audit
 from .codex_integration import CodexIntegrationError, CodexWatcher
 from .config import ProjectPulseConfig
+from .models import SessionRecordResult
 from .policy import MeaningfulChangeDetector
 from .publisher import PrivatePublisherError, PrivateRepoPublisher
 from .reporting import render_json_report, render_text_report
@@ -24,7 +25,7 @@ def _display_path(path: Path, root: Path) -> str:
     return str(relative_path)
 
 
-def _print_session_record(result) -> None:
+def _print_session_record(result: SessionRecordResult) -> None:
     print(f"Workspace: {result.session.workspace_root}")
     print(f"Session id: {result.session.session_id}")
     print(f"Store: {_display_path(result.store_path, Path.cwd())}")
@@ -162,15 +163,21 @@ def main(argv: list[str] | None = None) -> int:
 
     config_arg = getattr(args, "config", None)
     if config_arg is None:
-        if args.command == "safety-audit":
-            config = ProjectPulseConfig.load_safety_audit_default(Path.cwd())
-        else:
-            config = ProjectPulseConfig.load_default(Path.cwd())
+        try:
+            if args.command == "safety-audit":
+                config = ProjectPulseConfig.load_safety_audit_default(Path.cwd())
+            else:
+                config = ProjectPulseConfig.load_default(Path.cwd())
+        except ValueError as error:
+            parser.exit(2, f"project-pulse: invalid config: {error}\n")
     else:
         config_path = config_arg.resolve()
         if not config_path.exists():
             parser.error(f"Config file not found: {config_path}")
-        config = ProjectPulseConfig.load(config_path)
+        try:
+            config = ProjectPulseConfig.load(config_path)
+        except ValueError as error:
+            parser.exit(2, f"project-pulse: invalid config: {error}\n")
     scanner = FilesystemScanner(config.data)
     detector = MeaningfulChangeDetector(config.data)
 

@@ -74,7 +74,7 @@ class _FakeDetector:
     def __init__(self, decision: PublishDecision) -> None:
         self.decision = decision
 
-    def evaluate(self, session: WorkSession) -> PublishDecision:
+    def evaluate(self, _session: WorkSession) -> PublishDecision:
         return self.decision
 
 
@@ -86,8 +86,8 @@ class _FakeTracker:
     def record(
         self,
         workspace_root: Path,
-        session: WorkSession,
-        decision: PublishDecision,
+        _session: WorkSession,
+        _decision: PublishDecision,
     ) -> SessionRecordResult:
         self.calls.append(workspace_root.resolve())
         return self.result
