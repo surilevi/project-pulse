@@ -190,11 +190,14 @@ class PrivateRepoPublisher:
 
     def _matches_exclude(self, relative_path: Path) -> bool:
         relative_text = relative_path.as_posix()
-        parts = relative_path.parts
+        parts = tuple(part.replace("\\", "/") for part in relative_path.parts)
         for pattern in self.publisher.exclude_globs:
-            if fnmatch.fnmatch(relative_text, pattern):
+            normalized_pattern = pattern.replace("\\", "/")
+            if fnmatch.fnmatch(relative_text, normalized_pattern):
                 return True
-            if pattern in parts:
+            if normalized_pattern in parts:
+                return True
+            if any(fnmatch.fnmatch(part, normalized_pattern) for part in parts):
                 return True
         return False
 

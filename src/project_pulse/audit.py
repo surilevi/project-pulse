@@ -26,6 +26,11 @@ SUSPICIOUS_SECRET_PATTERNS = (
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
     re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
+    re.compile(
+        r"\b(?:api[_-]?key|token|secret|password)\s*=\s*['\"]?[^'\"\s#]{12,}",
+        re.IGNORECASE,
+    ),
 )
 
 SAFE_EMAIL_SUFFIXES = (
@@ -34,6 +39,10 @@ SAFE_EMAIL_SUFFIXES = (
 )
 
 ABSOLUTE_PATH_SCAN_EXCLUSIONS = {
+    ".githooks/pre-commit",
+    "src/project_pulse/audit.py",
+}
+SENSITIVE_TEXT_SCAN_EXCLUSIONS = {
     ".githooks/pre-commit",
     "src/project_pulse/audit.py",
 }
@@ -236,16 +245,17 @@ def _scan_text_file(relative_path: Path, file_path: Path) -> list[AuditFinding]:
                 )
                 break
 
-    for secret_pattern in SUSPICIOUS_SECRET_PATTERNS:
-        if secret_pattern.search(content):
-            findings.append(
-                AuditFinding(
-                    severity="high",
-                    path=str(relative_path),
-                    message="contains text that looks like a secret or access token",
+    if normalized_relative_path not in SENSITIVE_TEXT_SCAN_EXCLUSIONS:
+        for secret_pattern in SUSPICIOUS_SECRET_PATTERNS:
+            if secret_pattern.search(content):
+                findings.append(
+                    AuditFinding(
+                        severity="high",
+                        path=str(relative_path),
+                        message="contains text that looks like a secret or access token",
+                    )
                 )
-            )
-            break
+                break
 
     for match in EMAIL_PATTERN.finditer(content):
         email = match.group(0)

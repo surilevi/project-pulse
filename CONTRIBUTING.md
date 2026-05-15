@@ -13,6 +13,7 @@ Thanks for helping improve `Project Pulse`.
 
 ```powershell
 pip install -e .[dev]
+git config core.hooksPath .githooks
 python -m ruff check src tests
 python -m pytest
 python -m project_pulse public-audit
